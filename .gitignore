@@ -1,0 +1,79 @@
+# =====================================================================
+# THE CLEVER TRADER — OFFICIAL ENTERPRISE .GITIGNORE
+# Comprehensive Protection for Secrets, Binaries, Dependencies & Builds
+# =====================================================================
+
+# Environment Variables & Secrets (CRITICAL SECURITY)
+.env.local
+.env.*.local
+.env
+!.env.example
+secrets/
+*.pem
+*.key
+*.pfx
+
+# Node Dependencies & Caches
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js Build Artifacts
+.next/
+out/
+build/
+dist/
+tsconfig.tsbuildinfo
+next-env.d.ts.bak
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+*.lcov
+
+# Python & MT5 Runtime Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+mt5_sync.json
+
+# Large Binary Executables (Keep repository lightweight)
+cloudflared.exe
+*.exe
+*.dll
+
+# IDEs & OS Meta
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Temporary Logs & Debug Runs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+scratch/
+
+# Local Backups & Runtime State
+*.backup
+*.bak
+desktop_shortcuts_backup/
+data/active_tunnel.json
+data/mt5_live_state.json
+data/trade_history.json
+data/trade_history.backup.json
+data/*.backup.json
+
+

@@ -1,0 +1,23 @@
+{
+  "events": [
+    {
+      "id": "heal_1789801049172_2xk0",
+      "timestamp": 1789801049172,
+      "timeString": "11:57:29 PM",
+      "subsystem": "SYSTEM_LOCK",
+      "severity": "LOW",
+      "errorSignature": "User Triggered Manual Self-Healing Sweep",
+      "remediationAction": "Executed 4-point autonomous system audit and health score refresh.",
+      "romanUrduDescription": "Manual Self-Healing sweep complete! Tamam subsystems 100% healthy aur fast hain.",
+      "success": true
+    }
+  ],
+  "stats": {
+    "totalErrorsIntercepted": 1,
+    "autoResolvedCount": 1,
+    "mt5Reconnections": 0,
+    "apiRateLimitBypasses": 0,
+    "brokerCodeAdjustments": 0,
+    "staleLockCleanups": 1
+  }
+}

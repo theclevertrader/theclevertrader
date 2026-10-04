@@ -1,0 +1,66 @@
+// ═══════════════════════════════════════════════════════════════
+// EMA + ATR VOLATILITY BREAKOUT — GOLD TREND CATCHER
+// The Clever Trader | Hedge Fund Trend Following Model
+// ═══════════════════════════════════════════════════════════════
+// HOW IT WORKS:
+// 1. 200 EMA se trend direction identify karo
+// 2. 20-period Donchian High break = LONG entry (agar uptrend)
+// 3. 20-period Donchian Low break = SHORT entry (agar downtrend)
+// 4. ATR x 2.0 trailing stop se exit
+// 5. Session filter = sirf London + NY mein trade
+// ═══════════════════════════════════════════════════════════════
+
+//@version=5
+strategy("EMA + ATR Breakout — Gold Trend Catcher [Clever Trader]", overlay=true, 
+  default_qty_type=strategy.percent_of_equity, default_qty_value=1, 
+  calc_on_every_tick=false, commission_value=0.01, slippage=2)
+
+// === INPUTS ===
+emaLen        = input.int(200, "Trend EMA Length")
+breakoutLen   = input.int(20, "Donchian Breakout Length")
+atrLen        = input.int(14, "ATR Length")
+atrTrailMult  = input.float(2.0, "ATR Trailing Stop Multiplier")
+sessionFilter = input.session("0200-1200", "Trading Session (NY Time)")
+useSession    = input.bool(true, "Enable Session Filter")
+
+// === CALCULATIONS ===
+emaTrend    = ta.ema(close, emaLen)
+atr         = ta.atr(atrLen)
+donchianHi  = ta.highest(high, breakoutLen)[1]  // Previous bar (no lookahead bias)
+donchianLo  = ta.lowest(low, breakoutLen)[1]
+inSession   = useSession ? time(timeframe.period, sessionFilter, "America/New_York") : true
+
+// === TREND COLORS ===
+trendColor = close > emaTrend ? color.new(#10b981, 30) : color.new(#f43f5e, 30)
+plot(emaTrend, "200 EMA", trendColor, 3)
+
+// Donchian Channel
+plot(donchianHi, "Donchian High", color.new(#3b82f6, 60), 1, plot.style_stepline)
+plot(donchianLo, "Donchian Low", color.new(#f59e0b, 60), 1, plot.style_stepline)
+
+// Session background
+bgcolor(inSession and useSession ? color.new(color.blue, 96) : na, title="Active Session")
+
+// === ENTRY RULES ===
+longBreakout  = close > donchianHi and close > emaTrend and inSession and barstate.isconfirmed
+shortBreakout = close < donchianLo and close < emaTrend and inSession and barstate.isconfirmed
+
+if longBreakout and strategy.position_size <= 0
+    strategy.entry("Long", strategy.long)
+if shortBreakout and strategy.position_size >= 0
+    strategy.entry("Short", strategy.short)
+
+// === TRAILING STOP (ATR-based) ===
+longTrailStop  = ta.highest(high, breakoutLen) - (atr * atrTrailMult)
+shortTrailStop = ta.lowest(low, breakoutLen) + (atr * atrTrailMult)
+
+if strategy.position_size > 0
+    strategy.exit("Exit Long", "Long", stop=longTrailStop)
+if strategy.position_size < 0
+    strategy.exit("Exit Short", "Short", stop=shortTrailStop)
+
+// === VISUAL SIGNALS ===
+plotshape(longBreakout and strategy.position_size <= 0, "Buy Breakout", 
+  shape.triangleup, location.belowbar, color.new(#10b981, 0), size=size.small, text="BUY")
+plotshape(shortBreakout and strategy.position_size >= 0, "Sell Breakout", 
+  shape.triangledown, location.abovebar, color.new(#f43f5e, 0), size=size.small, text="SELL")

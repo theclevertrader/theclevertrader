@@ -1,0 +1,1165 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #000000;
+  --foreground: #f8fafc;
+  --tv-panel: #050505;
+  --tv-border: rgba(255, 255, 255, 0.08);
+
+  /* Vortex Terminal Institutional Tokens (Default: Pure Sleek OLED Black) */
+  --vortex-paper: #000000;
+  --vortex-panel: #050507;
+  --vortex-panel-subtle: #0a0a0d;
+  --vortex-line: rgba(255, 255, 255, 0.08);
+  --vortex-line-strong: rgba(255, 255, 255, 0.16);
+  --vortex-ink: #f8fafc;
+  --vortex-ink-soft: #94a3b8;
+  --vortex-ink-faint: #64748b;
+  --vortex-accent: #00ff9d;
+  --vortex-accent-soft: rgba(0, 255, 157, 0.12);
+  --vortex-up: #00ff9d;
+  --vortex-down: #f43f5e;
+  --vortex-grid: rgba(255, 255, 255, 0.02);
+  --vortex-ground-ring: rgba(255, 255, 255, 0.06);
+}
+
+html.dark,
+[data-theme="dark"] {
+  --background: #000000;
+  --vortex-paper: #000000;
+  --vortex-panel: #050507;
+  --vortex-panel-subtle: #0a0a0d;
+  --vortex-line: rgba(255, 255, 255, 0.08);
+  --vortex-line-strong: rgba(255, 255, 255, 0.16);
+  --vortex-ink: #f8fafc;
+  --vortex-ink-soft: #94a3b8;
+  --vortex-ink-faint: #64748b;
+  --vortex-accent: #00ff9d;
+  --vortex-accent-soft: rgba(0, 255, 157, 0.12);
+  --vortex-up: #00ff9d;
+  --vortex-down: #f43f5e;
+  --vortex-grid: rgba(255, 255, 255, 0.02);
+  --vortex-ground-ring: rgba(255, 255, 255, 0.06);
+}
+
+/* Pure Black / OLED Dark Utility Overrides */
+html.dark .bg-\[\#0c101c\],
+html.dark .bg-\[\#0d121f\],
+html.dark .bg-\[\#080b11\],
+html.dark .bg-\[\#06080d\],
+html.dark .bg-\[\#0c1017\],
+html.dark .bg-\[\#131722\],
+html.dark .bg-\[\#0a0e17\],
+html.dark .bg-\[\#080d16\],
+html.dark .bg-\[\#0e1424\],
+html.dark .bg-\[\#0d1424\],
+html.dark .bg-\[\#070c16\],
+html.dark .bg-\[\#0b101c\],
+html.dark .bg-\[\#10182c\],
+html.dark .bg-\[\#070a12\],
+html.dark .bg-\[\#040d08\],
+html.dark .bg-\[\#0c1527\] {
+  background-color: #09090d !important;
+}
+
+html.dark .bg-\[\#090e18\],
+html.dark .bg-\[\#111726\],
+html.dark .bg-\[\#0e131d\],
+html.dark .bg-\[\#050507\],
+html.dark .bg-\[\#0a0a0d\] {
+  background-color: #050508 !important;
+}
+
+html.theme-grey,
+[data-theme="grey"] {
+  --vortex-paper: #000000;
+  --vortex-panel: #09090d;
+  --vortex-panel-subtle: #050508;
+  --vortex-line: rgba(255, 255, 255, 0.08);
+  --vortex-line-strong: rgba(255, 255, 255, 0.16);
+  --vortex-ink: #f8fafc;
+  --vortex-ink-soft: #94a3b8;
+  --vortex-ink-faint: #64748b;
+  --vortex-accent: #38bdf8;
+  --vortex-accent-soft: rgba(56, 189, 248, 0.12);
+  --vortex-up: #00e87a;
+  --vortex-down: #f43f5e;
+  --vortex-grid: rgba(255, 255, 255, 0.02);
+  --vortex-ground-ring: rgba(255, 255, 255, 0.06);
+}
+
+html.light,
+[data-theme="light"] {
+  --vortex-paper: #f4f4f1;
+  --vortex-panel: #ffffff;
+  --vortex-panel-subtle: #f8f8f6;
+  --vortex-line: #e3e3dd;
+  --vortex-line-strong: #c9c9c1;
+  --vortex-ink: #16161a;
+  --vortex-ink-soft: #6d6d66;
+  --vortex-ink-faint: #9c9c94;
+  --vortex-accent: #1d4ed8;
+  --vortex-accent-soft: #dbe4fb;
+  --vortex-up: #12915a;
+  --vortex-down: #d0342c;
+  --vortex-grid: rgba(0, 0, 0, 0.035);
+  --vortex-ground-ring: rgba(22, 22, 26, 0.06);
+}
+
+body {
+  color: var(--foreground);
+  background-color: var(--background);
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  overflow-x: hidden;
+  letter-spacing: -0.012em;
+}
+
+/* Crisp Institutional Quant Typography */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+/* Monospace only for numbers, codes, tickers, and financial tables */
+.font-mono, 
+code, 
+kbd, 
+samp, 
+pre, 
+.tabular-nums {
+  font-family: 'JetBrains Mono', 'SF Mono', Consolas, monospace !important;
+  font-feature-settings: "tnum" 1, "zero" 1;
+  letter-spacing: -0.01em;
+}
+
+/* Subtle Institutional TradingView Panel Grid */
+.cyber-grid {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+}
+
+/* Institutional Card Glass & Stealth Containers */
+.ronas-card,
+.tv-card {
+  background: #09090d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ronas-card:hover,
+.tv-card:hover {
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+/* Bloomberg & MetaTrader 5 Institutional Workstation Styling */
+.bb-card {
+  background-color: #09090d;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  transition: all 0.2s ease;
+}
+
+.bb-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.bb-panel {
+  background-color: #050508;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-tab-active {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+}
+
+.bb-table th {
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+  letter-spacing: 0.05em;
+  background-color: #070a10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.bb-table td {
+  padding: 8px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+/* Smooth Tab Transitions */
+.tab-active {
+  background: rgba(41, 98, 255, 0.15);
+  color: #00f0ff;
+  border-bottom: 2px solid #00f0ff;
+}
+
+/* Custom Institutional Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0c1017;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #242b38;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2962ff;
+}
+
+/* Number formatting font */
+.font-mono-numbers {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===================================================================== */
+/* SEAMLESS CONTINUOUS INFINITE TICKER TAPE (BLOOMBERG / CNBC MARQUEE)   */
+/* ===================================================================== */
+@keyframes tickerTapeFlow {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-ticker-continuous {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: tickerTapeFlow 30s linear infinite;
+}
+
+.animate-ticker-continuous:hover {
+  animation-play-state: paused;
+}
+
+/* Edge Fade Mask for Seamless Disappearance */
+.ticker-fade-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 25px, black calc(100% - 25px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 25px, black calc(100% - 25px), transparent 100%);
+}
+
+/* ==========================================================================
+   THEME STYLES: DARK (DEFAULT), LIGHT, & GREY (MT5)
+/* ==========================================================================
+   UNIVERSAL THEME HARMONIZATION SYSTEM: DARK, LIGHT (WHITE), & GREY (MT5)
+   Ensures ALL colors, badges, metrics, tables, and text adapt harmoniously
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. LIGHT THEME (Wall Street Clean White / Modern Fintech Light)
+   High contrast, rich non-faded colors, zero washed-out neons
+   -------------------------------------------------------------------------- */
+html.light body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+html.light .cyber-grid {
+  background-image: 
+    linear-gradient(to right, rgba(15, 23, 42, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
+}
+
+/* Headers & Navigation Surfaces */
+html.light header {
+  background-color: rgba(255, 255, 255, 0.98) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Institutional Cards & Workstation Panels */
+html.light .bb-card,
+html.light .tv-card {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06) !important;
+}
+
+html.light .bb-panel {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* Bloomberg Financial Data Tables */
+html.light .bb-table th {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
+  font-weight: 700;
+}
+
+html.light .bb-table td {
+  color: #1e293b !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+
+html.light .bb-table tr:hover {
+  background-color: #f1f5f9 !important;
+}
+
+/* Typography Overrides for Light Mode (Crisp & High-Contrast) */
+html.light .text-white {
+  color: #0f172a !important;
+}
+
+html.light .text-slate-100,
+html.light .text-slate-200 {
+  color: #1e293b !important;
+}
+
+html.light .text-slate-300 {
+  color: #334155 !important;
+}
+
+html.light .text-slate-400 {
+  color: #475569 !important;
+}
+
+html.light .text-slate-500 {
+  color: #64748b !important;
+}
+
+html.light .text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+/* Preserve deliberate black text on buttons like bg-amber-400 text-black */
+html.light .text-black,
+html.light button.text-black,
+html.light span.text-black {
+  color: #000000 !important;
+}
+
+/* Amber / Gold Accents (Adapted to Deep Rich Wall Street Gold) */
+html.light .text-amber-200,
+html.light .text-amber-300,
+html.light .text-amber-400,
+html.light .text-amber-500,
+html.light .text-yellow-300,
+html.light .text-yellow-400,
+html.light .text-yellow-500,
+html.light .text-terminal-amber {
+  color: #b45309 !important; /* Deep warm bronze gold */
+}
+
+/* Cyan / Blue Accents (Adapted to Deep Oceanic Sapphire) */
+html.light .text-cyan-200,
+html.light .text-cyan-300,
+html.light .text-cyan-400,
+html.light .text-cyan-500,
+html.light .text-terminal-cyan {
+  color: #0284c7 !important; /* Deep cerulean / cyan */
+}
+
+/* Emerald / Green Accents (Adapted to Deep Forest Green) */
+html.light .text-emerald-300,
+html.light .text-emerald-400,
+html.light .text-emerald-500,
+html.light .text-green-300,
+html.light .text-green-400,
+html.light .text-green-500,
+html.light .text-terminal-green,
+html.light .text-terminal-greenGlow {
+  color: #047857 !important; /* Deep forest emerald */
+}
+
+/* Rose / Red Accents (Adapted to Deep Crimson) */
+html.light .text-rose-300,
+html.light .text-rose-400,
+html.light .text-rose-500,
+html.light .text-red-400,
+html.light .text-red-500,
+html.light .text-terminal-rose {
+  color: #b91c1c !important; /* Deep ruby crimson */
+}
+
+/* Blue & Purple Accents */
+html.light .text-blue-300,
+html.light .text-blue-400,
+html.light .text-terminal-blue {
+  color: #1d4ed8 !important;
+}
+
+html.light .text-orange-300,
+html.light .text-orange-400 {
+  color: #c2410c !important;
+}
+
+html.light .text-purple-300,
+html.light .text-purple-400,
+html.light .text-terminal-purple {
+  color: #6d28d9 !important;
+}
+
+/* Hover States (Prevent text from disappearing to white on light background) */
+html.light .hover\:text-white:hover,
+html.light .group:hover .group-hover\:text-white,
+html.light .hover\:text-slate-100:hover,
+html.light .hover\:text-slate-200:hover {
+  color: #0f172a !important;
+}
+
+/* Dark Container Backgrounds Transformed for Light Mode */
+html.light .bg-black\/40,
+html.light .bg-black\/50,
+html.light .bg-black\/60,
+html.light .bg-black\/70,
+html.light .bg-black\/80,
+html.light .bg-\[\#0a0e17\],
+html.light .bg-\[\#070b13\],
+html.light .bg-\[\#05080e\],
+html.light .bg-\[\#090f19\],
+html.light .bg-\[\#090d16\],
+html.light .bg-\[\#070a10\],
+html.light .bg-\[\#080b11\],
+html.light .bg-\[\#0c1017\] {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html.light .hover\:bg-\[\#0e1422\]:hover,
+html.light .hover\:bg-white\/\[0\.02\]:hover,
+html.light .hover\:bg-white\/\[0\.04\]:hover,
+html.light .hover\:bg-white\/\[0\.06\]:hover {
+  background-color: #f1f5f9 !important;
+}
+
+html.light .bg-white\/\[0\.02\],
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/\[0\.05\],
+html.light .bg-white\/\[0\.06\],
+html.light .bg-white\/\[0\.08\] {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Elevated Command Bar & Input Fields */
+html.light .bg-surface-elevated,
+html.light .bg-surface-elevated\/80,
+html.light .bg-surface-elevated\/60,
+html.light .bg-surface-elevated\/40,
+html.light .bg-surface {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #334155 !important;
+}
+
+html.light .bg-slate-800,
+html.light .bg-slate-800\/80,
+html.light .bg-slate-700,
+html.light .bg-slate-900 {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* Hairline Borders in Light Mode */
+html.light .border-terminal-border,
+html.light .border-white\/\[0\.03\],
+html.light .border-white\/\[0\.04\],
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/\[0\.07\],
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.1\] {
+  border-color: #e2e8f0 !important;
+}
+
+/* Status Badges & Pills (Rich Contrast on White) */
+html.light .bg-emerald-500\/10,
+html.light .bg-emerald-500\/15,
+html.light .bg-emerald-500\/20,
+html.light .bg-green-500\/5,
+html.light .bg-green-500\/10,
+html.light .bg-green-500\/15 {
+  background-color: #dcfce7 !important;
+  border-color: #86efac !important;
+  color: #15803d !important;
+}
+
+html.light .bg-rose-500\/10,
+html.light .bg-rose-500\/15,
+html.light .bg-rose-500\/20,
+html.light .bg-red-500\/10,
+html.light .bg-red-500\/15 {
+  background-color: #ffe4e6 !important;
+  border-color: #fca5a5 !important;
+  color: #b91c1c !important;
+}
+
+html.light .bg-amber-500\/10,
+html.light .bg-amber-500\/15,
+html.light .bg-amber-500\/20,
+html.light .bg-amber-500\/25,
+html.light .bg-amber-500\/30,
+html.light .bg-yellow-500\/15 {
+  background-color: #fef3c7 !important;
+  border-color: #fcd34d !important;
+  color: #b45309 !important;
+}
+
+html.light .bg-cyan-500\/10,
+html.light .bg-cyan-500\/15,
+html.light .bg-cyan-500\/20,
+html.light .bg-cyan-500\/25,
+html.light .bg-blue-500\/10,
+html.light .bg-blue-500\/15 {
+  background-color: #e0f2fe !important;
+  border-color: #7dd3fc !important;
+  color: #0369a1 !important;
+}
+
+html.light .bg-orange-500\/10,
+html.light .bg-orange-500\/15 {
+  background-color: #ffedd5 !important;
+  border-color: #fdba74 !important;
+  color: #c2410c !important;
+}
+
+/* Active Tabs in Light Mode */
+html.light .bb-tab-active {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #b45309 !important;
+  box-shadow: 0 1px 4px rgba(180, 83, 9, 0.2) !important;
+}
+
+/* Scrollbars in Light Mode */
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* --------------------------------------------------------------------------
+   2. GREY THEME (MetaTrader 5 Classic Charcoal Slate Desktop)
+   Balanced charcoal surfaces with high-clarity luminous accents
+   -------------------------------------------------------------------------- */
+html.theme-grey body {
+  background-color: #161922;
+  color: #f3f4f6;
+}
+
+html.theme-grey .cyber-grid {
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
+
+html.theme-grey header {
+  background-color: rgba(28, 32, 44, 0.98) !important;
+  border-color: #2b3346 !important;
+}
+
+html.theme-grey aside {
+  background-color: #1a1e2a !important;
+  border-color: #2b3346 !important;
+}
+
+html.theme-grey .bb-card,
+html.theme-grey .tv-card {
+  background-color: #222736 !important;
+  border: 1px solid #2e364a !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.4) !important;
+}
+
+html.theme-grey .bb-panel {
+  background-color: #1a1e2b !important;
+  border: 1px solid #282f42 !important;
+}
+
+html.theme-grey .bb-table th {
+  background-color: #161923 !important;
+  color: #9ca3af !important;
+  border-bottom: 1px solid #2e364a !important;
+}
+
+html.theme-grey .bb-table td {
+  color: #e2e8f0 !important;
+  border-bottom: 1px solid #222736 !important;
+}
+
+html.theme-grey .bb-table tr:hover {
+  background-color: #282e40 !important;
+}
+
+/* Text Colors in Grey Mode */
+html.theme-grey .text-white {
+  color: #f8fafc !important;
+}
+
+html.theme-grey .text-slate-100,
+html.theme-grey .text-slate-200 {
+  color: #f1f5f9 !important;
+}
+
+html.theme-grey .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+html.theme-grey .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+html.theme-grey .text-slate-500 {
+  color: #64748b !important;
+}
+
+/* Accents in Grey Mode */
+html.theme-grey .text-amber-200,
+html.theme-grey .text-amber-300,
+html.theme-grey .text-amber-400,
+html.theme-grey .text-yellow-400,
+html.theme-grey .text-terminal-amber {
+  color: #fbbf24 !important;
+}
+
+html.theme-grey .text-cyan-200,
+html.theme-grey .text-cyan-300,
+html.theme-grey .text-cyan-400,
+html.theme-grey .text-terminal-cyan {
+  color: #38bdf8 !important;
+}
+
+html.theme-grey .text-emerald-300,
+html.theme-grey .text-emerald-400,
+html.theme-grey .text-green-400,
+html.theme-grey .text-terminal-green {
+  color: #34d399 !important;
+}
+
+html.theme-grey .text-rose-300,
+html.theme-grey .text-rose-400,
+html.theme-grey .text-red-400,
+html.theme-grey .text-terminal-rose {
+  color: #f87171 !important;
+}
+
+/* Backgrounds in Grey Mode */
+html.theme-grey .bg-black\/40,
+html.theme-grey .bg-black\/50,
+html.theme-grey .bg-black\/60,
+html.theme-grey .bg-\[\#0a0e17\],
+html.theme-grey .bg-\[\#070b13\],
+html.theme-grey .bg-\[\#05080e\],
+html.theme-grey .bg-\[\#090f19\],
+html.theme-grey .bg-\[\#090d16\],
+html.theme-grey .bg-\[\#070a10\],
+html.theme-grey .bg-\[\#080b11\],
+html.theme-grey .bg-\[\#0c1017\] {
+  background-color: #050507 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+html.theme-grey .bg-surface-elevated,
+html.theme-grey .bg-surface-elevated\/80,
+html.theme-grey .bg-surface-elevated\/60,
+html.theme-grey .bg-surface {
+  background-color: #070709 !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #cbd5e1 !important;
+}
+
+html.theme-grey .bg-slate-800,
+html.theme-grey .bg-slate-800\/80,
+html.theme-grey .bg-slate-700 {
+  background-color: #0c0c0f !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  color: #e2e8f0 !important;
+}
+
+html.theme-grey .border-terminal-border,
+html.theme-grey .border-white\/\[0\.04\],
+html.theme-grey .border-white\/\[0\.06\],
+html.theme-grey .border-white\/\[0\.07\],
+html.theme-grey .border-white\/\[0\.08\],
+html.theme-grey .border-white\/\[0\.1\] {
+  border-color: #2b3346 !important;
+}
+
+html.theme-grey ::-webkit-scrollbar-track {
+  background: #161922;
+}
+html.theme-grey ::-webkit-scrollbar-thumb {
+  background: #2e364a;
+  border-radius: 3px;
+}
+html.theme-grey ::-webkit-scrollbar-thumb:hover {
+  background: #3b82f6;
+}
+
+/* Smooth Institutional Modal & Dropdown Animation Keyframes */
+@keyframes modalPopIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(-6px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes backdropFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes accordionExpand {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-modal-pop {
+  animation: modalPopIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+}
+
+.animate-backdrop-fade {
+  animation: backdropFadeIn 0.2s ease-out forwards;
+  will-change: opacity;
+}
+
+.animate-expand {
+  animation: accordionExpand 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Beautiful Institutional Select & Option Styling */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2300f0ff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.25rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+select option {
+  background-color: #0b101b;
+  color: #f8fafc;
+  padding: 8px 12px;
+}
+
+html.theme-light select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+html.theme-grey select option {
+  background-color: #191c28;
+  color: #e2e8f0;
+}
+
+/* ==========================================================================
+   RONAS IT CRYPTOCURRENCY TRADING DASHBOARD FINTECH DESIGN SYSTEM
+   Palette: Deep Obsidian (#080b11), Card (#0d121f), Pastel Sky Blue (#60a5fa),
+   Neon Lime (#22c55e), Electric Rose (#f43f5e), Pure Crisp White (#ffffff)
+   ========================================================================== */
+.ronas-card {
+  background-color: #050507;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.03) inset;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ronas-card:hover {
+  border-color: rgba(0, 255, 157, 0.25);
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 255, 157, 0.08);
+}
+
+.ronas-card-subtle {
+  background-color: #09090b;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0.875rem;
+}
+
+.ronas-glow-blue {
+  box-shadow: 0 0 20px rgba(96, 165, 250, 0.2);
+}
+
+.ronas-glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.25);
+}
+
+.ronas-glow-rose {
+  box-shadow: 0 0 20px rgba(244, 63, 94, 0.25);
+}
+
+.ronas-badge-buy {
+  background-color: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+.ronas-badge-sell {
+  background-color: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #fb7185;
+}
+
+.ronas-badge-blue {
+  background-color: rgba(96, 165, 250, 0.12);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  color: #93c5fd;
+}
+
+/* ==========================================================================
+   LIGHT THEME — Ronas Cards & Hardcoded Component Backgrounds
+   ========================================================================== */
+html.light .ronas-card {
+  background-color: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.03) inset !important;
+}
+
+html.light .ronas-card:hover {
+  border-color: #94a3b8 !important;
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(0, 0, 0, 0.05) inset !important;
+}
+
+html.light .ronas-card-subtle {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* Override all hardcoded dark component backgrounds in Light mode */
+html.light .bg-\[\#0c101c\],
+html.light .bg-\[\#0d1424\],
+html.light .bg-\[\#0e1424\],
+html.light .bg-\[\#0b101c\],
+html.light .bg-\[\#080d16\],
+html.light .bg-\[\#09101c\],
+html.light .bg-\[\#0d121f\],
+html.light .bg-\[\#10182c\],
+html.light .bg-\[\#070a12\],
+html.light .bg-\[\#080c16\],
+html.light .bg-\[\#090d16\] {
+  background-color: #ffffff !important;
+}
+
+/* Gradient overrides for hero sections */
+html.light [class*="bg-gradient-to-br"][class*="from-\[\#0e1424\]"],
+html.light [class*="bg-gradient-to-r"][class*="from-\[\#0d1424\]"] {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9, #ffffff) !important;
+}
+
+/* Input fields in Light mode */
+html.light input[class*="bg-\[\#080d16\]"],
+html.light select[class*="bg-\[\#080d16\]"] {
+  background-color: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+html.light input::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Blue glowing active states adapted for Light mode */
+html.light .bg-blue-500 {
+  background-color: #2563eb !important;
+}
+
+html.light .shadow-lg.shadow-blue-500\/25 {
+  box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Emerald BUY button in Light mode */
+html.light .bg-emerald-500 {
+  background-color: #059669 !important;
+}
+
+/* Rose SELL button in Light mode */
+html.light .bg-rose-500 {
+  background-color: #e11d48 !important;
+}
+
+/* Blue accent pills */
+html.light .bg-blue-500\/20 {
+  background-color: #dbeafe !important;
+}
+
+html.light .bg-blue-500\/15 {
+  background-color: #e0f2fe !important;
+}
+
+/* Ronas glow effects removed in Light mode (too subtle on white) */
+html.light .ronas-glow-blue,
+html.light .ronas-glow-green,
+html.light .ronas-glow-rose {
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06) !important;
+}
+
+/* ==========================================================================
+   GREY THEME — Ronas Cards & Hardcoded Component Backgrounds
+   ========================================================================== */
+html.theme-grey .ronas-card {
+  background-color: #050507 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.03) inset !important;
+}
+
+html.theme-grey .ronas-card:hover {
+  border-color: rgba(0, 255, 157, 0.25) !important;
+  box-shadow: 0 8px 30px -4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 255, 157, 0.08) !important;
+}
+
+html.theme-grey .ronas-card-subtle {
+  background-color: #09090b !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Override all hardcoded dark component backgrounds in Grey mode */
+html.theme-grey .bg-\[\#0c101c\],
+html.theme-grey .bg-\[\#0d1424\],
+html.theme-grey .bg-\[\#0e1424\],
+html.theme-grey .bg-\[\#0b101c\],
+html.theme-grey .bg-\[\#080d16\],
+html.theme-grey .bg-\[\#09101c\],
+html.theme-grey .bg-\[\#0d121f\],
+html.theme-grey .bg-\[\#10182c\],
+html.theme-grey .bg-\[\#070a12\],
+html.theme-grey .bg-\[\#080c16\],
+html.theme-grey .bg-\[\#090d16\] {
+  background-color: #050507 !important;
+}
+
+/* Input fields in Grey mode */
+html.theme-grey input[class*="bg-\[\#080d16\]"],
+html.theme-grey select[class*="bg-\[\#080d16\]"] {
+  background-color: #161922 !important;
+  border-color: #2e364a !important;
+  color: #f1f5f9 !important;
+}
+
+/* Gradient overrides for hero sections in Grey mode */
+html.theme-grey [class*="bg-gradient-to-br"][class*="from-\[\#0e1424\]"],
+html.theme-grey [class*="bg-gradient-to-r"][class*="from-\[\#0d1424\]"] {
+  background: linear-gradient(135deg, #252a3b, #1e2231, #222736) !important;
+}
+
+/* Shell outer container override */
+html.light .bg-\[\#06080d\] {
+  background-color: #f1f5f9 !important;
+}
+
+html.theme-grey .bg-\[\#06080d\] {
+  background-color: #131720 !important;
+}
+
+/* Light mode sidebar */
+html.light aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Grey mode sidebar */
+html.theme-grey aside {
+  background-color: #171b26 !important;
+  border-color: #2b3346 !important;
+}
+
+/* =========================================
+   SMOOTH FOCUS & INTERACTION STATES
+   ========================================= */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.3);
+  transition: box-shadow 0.2s ease;
+}
+
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.25) !important;
+}
+
+/* =========================================
+   UTILITIES
+   ========================================= */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* =========================================
+   VORTEX TERMINAL KEYFRAMES & UTILITIES
+   ========================================= */
+@keyframes ct-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.ct-marquee {
+  animation: ct-marquee 42s linear infinite;
+}
+
+@keyframes ct-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+.ct-pulse {
+  animation: ct-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes ct-flash-up {
+  from {
+    background-color: rgba(18, 145, 90, 0.22);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+@keyframes ct-flash-down {
+  from {
+    background-color: rgba(208, 52, 44, 0.22);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.ct-flash-up {
+  animation: ct-flash-up 0.9s ease-out;
+}
+.ct-flash-down {
+  animation: ct-flash-down 0.9s ease-out;
+}
+
+.ct-grid-bg {
+  background-image:
+    linear-gradient(to right, var(--vortex-grid, rgba(255, 255, 255, 0.025)) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--vortex-grid, rgba(255, 255, 255, 0.025)) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* ===================================================================== */
+/* ULTRA-SNAPPY GPU-ACCELERATED DROPDOWNS & MODALS (INSTANT SMOOTH POP)  */
+/* ===================================================================== */
+.fast-pop {
+  animation: fastPop 0.12s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  transform-origin: top;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+@keyframes fastPop {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.fast-modal {
+  animation: fastModal 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+@keyframes fastModal {
+  0% {
+    opacity: 0;
+    transform: scale(0.97) translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ========================================================================== */
+/* THE CLEVER TRADER — 240 FPS / UNCAPPED NATIVE GPU ACCELERATION & ZERO-LATENCY LOCK */
+/* ========================================================================== */
+
+/* Force Dedicated GPU Hardware Composite Layer */
+canvas,
+.gpu-layer,
+.orderflow-stage {
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform;
+}
+
+/* Containment to isolate layout reflows from slowing down the main thread */
+.contain-paint {
+  contain: paint layout style;
+}
+
+/* Instantaneous sub-millisecond scrolling with zero lag */
+main, .overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: auto !important;
+}
+
+/* Pre-rasterization hints for instant page transitions */
+a[href] {
+  touch-action: manipulation;
+}

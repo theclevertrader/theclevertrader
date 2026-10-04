@@ -1,0 +1,23 @@
+{
+  "regime": "LOW_VOLATILITY",
+  "volatilityIndexPct": 55,
+  "calibratedAt": "2026-10-04T11:13:04.312Z",
+  "recommendedPair": "XAUUSD",
+  "parameters": {
+    "minScore": 65,
+    "breakEvenPips": 12,
+    "partialClosePips": 20,
+    "trailingActivationPips": 15,
+    "trailingDistancePips": 12,
+    "trailingStepPips": 5,
+    "cooldownSeconds": 180,
+    "fvgBufferMultiplier": 0.8,
+    "maxPositionsPerSymbol": 2
+  },
+  "rationales": [
+    "Market in low-volatility consolidation / low ATR regime.",
+    "Tightening Break-Even (12 pips) to lock gains faster.",
+    "Lowering Trailing Stop threshold to 15 pips for swift micro-scalp realization.",
+    "Confluence threshold relaxed to 65 to capitalize on range expansions."
+  ]
+}

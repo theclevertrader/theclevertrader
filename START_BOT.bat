@@ -83,16 +83,24 @@ set /a port_tries=0
 :port_check_loop
 set /a port_tries+=1
 netstat -aon | findstr /r ":3000.*LISTENING" >nul
-if "%ERRORLEVEL%"=="0" (
-    echo [+] Web Terminal Engine is ONLINE!
-    goto :server_ready
-)
-if %port_tries% geq 30 (
-    echo [!] Web Terminal starting up, proceeding...
-    goto :server_ready
-)
+if "%ERRORLEVEL%"=="0" goto :verify_http
+if %port_tries% geq 30 goto :server_ready
 ping -n 2 127.0.0.1 >nul
 goto :port_check_loop
+
+:verify_http
+echo [*] Verifying Terminal Health (HTTP 200 check)...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$ok = $false; for ($i=0; $i -lt 12; $i++) { try { $res = (Invoke-WebRequest -Uri 'http://localhost:3000' -UseBasicParsing -TimeoutSec 2).StatusCode; if ($res -eq 200) { $ok = $true; break } } catch {} Start-Sleep -Milliseconds 800 }; if ($ok) { exit 0 } else { exit 1 }"
+if %ERRORLEVEL% equ 0 (
+    echo [+] Web Terminal Engine is 100% ONLINE (HTTP 200 OK)!
+    goto :server_ready
+)
+
+echo [!] Web Terminal returned error or timeout. Auto-healing...
+taskkill /F /IM node.exe 2>nul
+ping -n 2 127.0.0.1 >nul
+wscript "%~dp0run_hidden.vbs" "%TEMP%\_ct_server.bat"
+ping -n 3 127.0.0.1 >nul
 
 :server_ready
 

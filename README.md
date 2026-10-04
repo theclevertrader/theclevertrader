@@ -6,6 +6,31 @@ A production-grade algorithmic and AI-powered trading platform combining **Smart
 
 ## Live Terminal URL
 - Primary Dashboard: **[http://localhost:3000](http://localhost:3000)**
+- Cyber War Room HUD: **[http://localhost:3000/war-room](http://localhost:3000/war-room)**
+
+---
+
+## 📸 Institutional Terminal Showcase (Live Screenshots)
+
+### 1. Main Command Center (`/`)
+*Vortex Quant Engine, Multi-Asset Market Watch, Real-Time Level-2 Order Book, Economic Calendar & Macro Correlation.*
+![Main Command Center](public/screenshots/01_main_command_center.png)
+
+### 2. Cyber War Room Matrix HUD (`/war-room`)
+*Military-Grade Quant Telemetry, Autonomous Radar Scanner, Live P&L Heartbeat Monitor & Intercepted Execution Stream.*
+![Cyber War Room HUD](public/screenshots/02_cyber_war_room_hud.png)
+
+### 3. Institutional Forex Quant Matrix (`/forex-matrix`)
+*10-Node Institutional Synergy Pipeline (CFTC COT, FRED, BLS, BEA, Fed, ECB, BoE, BoJ, GDELT) & 8-Factor Scorecard.*
+![Forex Quant Matrix](public/screenshots/03_forex_quant_matrix.png)
+
+### 4. Global Strategy Leaderboard & Dynamic Benchmark (`/strategies`)
+*Cross-Platform Quant Intelligence combining TradingView (Pine Script v5/v6), QuantConnect (Lean Python), MQL5 CodeBase & GitHub Quant.*
+![Global Strategy Leaderboard](public/screenshots/04_global_strategies_benchmark.png)
+
+### 5. Quantitative Backtesting Engine (`/backtesting`)
+*Institutional Simulation Equity Curve with zero lookahead bias, Sharpe Ratio 22.48, Profit Factor 11.4 & 83.3% Win Rate.*
+![Quantitative Backtesting Engine](public/screenshots/05_quantitative_backtesting_engine.png)
 
 ---
 

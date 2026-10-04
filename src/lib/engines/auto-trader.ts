@@ -69,6 +69,10 @@ export interface AutoTradeRecord {
   reasons: string[];
   targetBroker: string;
   mt5OrderId?: string;
+  realizedPnl?: number;
+  closedPrice?: number;
+  closedTime?: number;
+  pipsGained?: number;
   finRobotConsensus?: {
     consensusScore: number;
     agreementRatio: string;
@@ -201,47 +205,13 @@ export class AutoTraderEngine {
     }
   }
 
-  private static tradeHistory: AutoTradeRecord[] = [
-    {
-      id: 'auto-init-1',
-      timestamp: Date.now() - 1000 * 60 * 12,
-      timeString: new Date(Date.now() - 1000 * 60 * 12).toLocaleTimeString(),
-      symbol: 'XAUUSD',
-      action: 'BUY',
-      lotSize: 0.01,
-      entryPrice: 2648.50,
-      stopLoss: 2645.50,
-      takeProfit: 2657.50,
-      score: 89,
-      classification: 'HIGH QUALITY',
-      status: 'FILLED_BOTH',
-      romanUrduSummary: 'XAUUSD 15M Bullish Order Block aur Asian Low liquidity sweep ho chuki hai. Confluence 89/100 tha, is liye bot ne khud BUY 0.01 lot trade le li hai.',
-      reasons: ['Liquidity sweep below Asian Low', '15M Bullish MSS structure break', 'Confluence Score 89 >= 75 threshold'],
-      targetBroker: 'PAPER + MT5 BRIDGE',
-    },
-    {
-      id: 'auto-init-2',
-      timestamp: Date.now() - 1000 * 60 * 35,
-      timeString: new Date(Date.now() - 1000 * 60 * 35).toLocaleTimeString(),
-      symbol: 'BTCUSD',
-      action: 'BUY',
-      lotSize: 0.01,
-      entryPrice: 63650.0,
-      stopLoss: 63350.0,
-      takeProfit: 64550.0,
-      score: 82,
-      classification: 'VALID',
-      status: 'FILLED_BOTH',
-      romanUrduSummary: 'BTCUSD 1H Demand zone retest aur Volume expansion. Bot ne khud 0.01 lot BUY execute kar di.',
-      reasons: ['1H Demand Zone Retest', 'RSI Bullish Hidden Divergence', 'Confluence Score 82 >= 75 threshold'],
-      targetBroker: 'PAPER + MT5 BRIDGE',
-    },
-  ];
+  // Genuine Trade Ledger: Loaded from disk (data/trade_history.json) or starts clean with 0 fake entries
+  private static tradeHistory: AutoTradeRecord[] = [];
 
   private static lastTradeTimeBySymbol: Record<string, number> = {};
   private static scanIntervalId: any = null;
-  private static totalRealizedProfitUsd: number = 54.80;
-  private static totalRealizedLossUsd: number = 8.20;
+  private static totalRealizedProfitUsd: number = 0;
+  private static totalRealizedLossUsd: number = 0;
   private static partiallyClosedTickets: Set<number | string> = new Set();
   private static closedTickets: Set<number | string> = new Set();
   private static breakEvenTickets: Set<number | string> = new Set();
@@ -1487,87 +1457,148 @@ export class AutoTraderEngine {
    */
   public static getDetailedAnalytics() {
     this.ensureStorageLoaded();
-    const dailyCount = 10;
-    const dailyWins = 8;
-    const dailyLosses = 2;
-    const dailyProfit = Number(this.dailyRealizedProfitUsd.toFixed(2));
-    const dailyLoss = Number(this.dailyLossUsd.toFixed(2));
-    const dailyNet = Number((dailyProfit - dailyLoss).toFixed(2));
-    const dailyWinRate = Math.round((dailyWins / dailyCount) * 100);
+    const now = Date.now();
+    const startOfToday = new Date().setHours(0, 0, 0, 0);
+    const startOfWeek = now - 7 * 24 * 60 * 60 * 1000;
+    const startOfMonth = now - 30 * 24 * 60 * 60 * 1000;
 
-    const weeklyCount = 42;
-    const weeklyWins = 33;
-    const weeklyLosses = 9;
-    const weeklyProfit = 286.40;
-    const weeklyLoss = 46.20;
-    const weeklyNet = Number((weeklyProfit - weeklyLoss).toFixed(2));
-    const weeklyWinRate = Math.round((weeklyWins / weeklyCount) * 100);
+    const calcWindow = (fromTime: number) => {
+      const records = this.tradeHistory.filter(t => t.timestamp >= fromTime);
+      const tradesCount = records.length;
+      let wins = 0;
+      let losses = 0;
+      let profitUsd = 0;
+      let lossUsd = 0;
 
-    const monthlyCount = 156;
-    const monthlyWins = 121;
-    const monthlyLosses = 35;
-    const monthlyProfit = 1048.50;
-    const monthlyLoss = 192.30;
-    const monthlyNet = Number((monthlyProfit - monthlyLoss).toFixed(2));
-    const monthlyWinRate = Math.round((monthlyWins / monthlyCount) * 100);
+      for (const t of records) {
+        const pnl = t.realizedPnl ?? (t.status === 'AUTO_CLOSED' ? 0 : 0);
+        if (pnl > 0) {
+          wins++;
+          profitUsd += pnl;
+        } else if (pnl < 0) {
+          losses++;
+          lossUsd += Math.abs(pnl);
+        }
+      }
 
-    // Pair breakdown: "kis pair ma kitni trade i"
-    const pairBreakdown = [
-      { symbol: 'XAUUSD', name: 'Gold vs US Dollar', trades: 64, wins: 51, losses: 13, winRate: 79.7, netPnl: 524.50, buyCount: 40, sellCount: 24, pipGain: 342.5 },
-      { symbol: 'BTCUSD', name: 'Bitcoin Spot', trades: 38, wins: 29, losses: 9, winRate: 76.3, netPnl: 312.00, buyCount: 22, sellCount: 16, pipGain: 840.0 },
-      { symbol: 'EURUSD', name: 'Euro vs Dollar', trades: 26, wins: 20, losses: 6, winRate: 76.9, netPnl: 128.60, buyCount: 15, sellCount: 11, pipGain: 184.2 },
-      { symbol: 'NAS100', name: 'Nasdaq 100 Index', trades: 18, wins: 14, losses: 4, winRate: 77.8, netPnl: 182.40, buyCount: 10, sellCount: 8, pipGain: 220.0 },
-      { symbol: 'GBPUSD', name: 'Pound vs Dollar', trades: 14, wins: 11, losses: 3, winRate: 78.6, netPnl: 84.50, buyCount: 9, sellCount: 5, pipGain: 142.0 },
-      { symbol: 'USDJPY', name: 'Dollar vs Yen', trades: 12, wins: 9, losses: 3, winRate: 75.0, netPnl: 68.20, buyCount: 7, sellCount: 5, pipGain: 118.5 },
-      { symbol: 'US30', name: 'Dow Jones 30 Index', trades: 15, wins: 12, losses: 3, winRate: 80.0, netPnl: 145.80, buyCount: 8, sellCount: 7, pipGain: 310.0 },
-    ];
+      const netPnl = Number((profitUsd - lossUsd).toFixed(2));
+      const winRate = (wins + losses) > 0 ? Math.round((wins / (wins + losses)) * 100) : (tradesCount > 0 ? 0 : 0);
 
-    // Overall summary: "or phr overall bty"
+      return {
+        tradesCount,
+        wins,
+        losses,
+        winRate,
+        profitUsd: Number(profitUsd.toFixed(2)),
+        lossUsd: Number(lossUsd.toFixed(2)),
+        netPnl,
+      };
+    };
+
+    const daily = {
+      tradesCount: this.getTodayTradeCount(),
+      wins: this.tradeHistory.filter(t => t.timestamp >= startOfToday && (t.realizedPnl ?? 0) > 0).length,
+      losses: this.consecutiveLossesToday,
+      winRate: (this.tradeHistory.filter(t => t.timestamp >= startOfToday).length > 0)
+        ? Math.round((this.tradeHistory.filter(t => t.timestamp >= startOfToday && (t.realizedPnl ?? 0) > 0).length / Math.max(1, this.tradeHistory.filter(t => t.timestamp >= startOfToday).length)) * 100)
+        : 0,
+      profitUsd: Number(this.dailyRealizedProfitUsd.toFixed(2)),
+      lossUsd: Number(this.dailyLossUsd.toFixed(2)),
+      netPnl: Number((this.dailyRealizedProfitUsd - this.dailyLossUsd).toFixed(2)),
+    };
+
+    const weekly = calcWindow(startOfWeek);
+    const monthly = calcWindow(startOfMonth);
+
+    // Dynamic Pair breakdown from real trade ledger
+    const pairMap = new Map<string, {
+      symbol: string;
+      name: string;
+      trades: number;
+      wins: number;
+      losses: number;
+      netPnl: number;
+      buyCount: number;
+      sellCount: number;
+      pipGain: number;
+    }>();
+
+    for (const t of this.tradeHistory) {
+      const sym = t.symbol;
+      const spec = INSTITUTIONAL_SYMBOLS[sym];
+      const entry = pairMap.get(sym) || {
+        symbol: sym,
+        name: spec?.name || sym,
+        trades: 0,
+        wins: 0,
+        losses: 0,
+        netPnl: 0,
+        buyCount: 0,
+        sellCount: 0,
+        pipGain: 0,
+      };
+
+      entry.trades++;
+      if (t.action === 'BUY') entry.buyCount++;
+      else entry.sellCount++;
+
+      const pnl = t.realizedPnl ?? 0;
+      entry.netPnl += pnl;
+      if (pnl > 0) entry.wins++;
+      else if (pnl < 0) entry.losses++;
+
+      if (t.pipsGained) entry.pipGain += t.pipsGained;
+      pairMap.set(sym, entry);
+    }
+
+    const pairBreakdown = Array.from(pairMap.values()).map(p => ({
+      ...p,
+      winRate: p.trades > 0 ? Number(((p.wins / p.trades) * 100).toFixed(1)) : 0,
+      netPnl: Number(p.netPnl.toFixed(2)),
+      pipGain: Number(p.pipGain.toFixed(1)),
+    }));
+
+    const totalTrades = this.tradeHistory.length;
+    const wins = this.tradeHistory.filter(t => (t.realizedPnl ?? 0) > 0).length;
+    const losses = this.tradeHistory.filter(t => (t.realizedPnl ?? 0) < 0).length;
+    const overallWinRate = (wins + losses) > 0 ? Math.round((wins / (wins + losses)) * 100) : 0;
+    const totalProfitUsd = Number(this.totalRealizedProfitUsd.toFixed(2));
+    const totalLossUsd = Number(this.totalRealizedLossUsd.toFixed(2));
+    const netRealizedPnl = Number((totalProfitUsd - totalLossUsd).toFixed(2));
+    const profitFactor = totalLossUsd > 0 ? Number((totalProfitUsd / totalLossUsd).toFixed(2)) : (totalProfitUsd > 0 ? 99.9 : 0);
+
+    const winningTrades = this.tradeHistory.filter(t => (t.realizedPnl ?? 0) > 0);
+    const losingTrades = this.tradeHistory.filter(t => (t.realizedPnl ?? 0) < 0);
+    const avgWin = winningTrades.length > 0 ? Number((winningTrades.reduce((sum, t) => sum + (t.realizedPnl ?? 0), 0) / winningTrades.length).toFixed(2)) : 0;
+    const avgLoss = losingTrades.length > 0 ? Number((losingTrades.reduce((sum, t) => sum + Math.abs(t.realizedPnl ?? 0), 0) / losingTrades.length).toFixed(2)) : 0;
+
+    let bestTrade = 'None yet';
+    if (winningTrades.length > 0) {
+      const best = winningTrades.reduce((prev, curr) => ((curr.realizedPnl ?? 0) > (prev.realizedPnl ?? 0) ? curr : prev));
+      bestTrade = `+$${(best.realizedPnl ?? 0).toFixed(2)} USD (${best.symbol} ${best.action})`;
+    }
+
     const overall = {
-      totalTrades: monthlyCount,
-      overallWins: monthlyWins,
-      overallLosses: monthlyLosses,
-      overallWinRate: monthlyWinRate,
-      totalProfitUsd: monthlyProfit,
-      totalLossUsd: monthlyLoss,
-      netRealizedPnl: monthlyNet,
-      profitFactor: Number((monthlyProfit / (monthlyLoss || 1)).toFixed(2)),
-      avgWin: 8.66,
-      avgLoss: 5.49,
-      bestTrade: '+28.40 USD (XAUUSD BUY)',
+      totalTrades,
+      overallWins: wins,
+      overallLosses: losses,
+      overallWinRate,
+      totalProfitUsd,
+      totalLossUsd,
+      netRealizedPnl,
+      profitFactor,
+      avgWin,
+      avgLoss,
+      bestTrade,
       accountBalance: Mt5Bridge.getConfig().balance || 500.0,
       activeOpenPositions: Mt5Bridge.getPositions().length,
       floatingProfit: Mt5Bridge.getFloatingProfit(),
     };
 
     return {
-      daily: {
-        tradesCount: dailyCount,
-        wins: dailyWins,
-        losses: dailyLosses,
-        winRate: dailyWinRate,
-        profitUsd: dailyProfit,
-        lossUsd: dailyLoss,
-        netPnl: dailyNet,
-      },
-      weekly: {
-        tradesCount: weeklyCount,
-        wins: weeklyWins,
-        losses: weeklyLosses,
-        winRate: weeklyWinRate,
-        profitUsd: weeklyProfit,
-        lossUsd: weeklyLoss,
-        netPnl: weeklyNet,
-      },
-      monthly: {
-        tradesCount: monthlyCount,
-        wins: monthlyWins,
-        losses: monthlyLosses,
-        winRate: monthlyWinRate,
-        profitUsd: monthlyProfit,
-        lossUsd: monthlyLoss,
-        netPnl: monthlyNet,
-      },
+      daily,
+      weekly,
+      monthly,
       pairBreakdown,
       overall,
     };
@@ -1859,18 +1890,32 @@ export class AutoTraderEngine {
         mtfConfluenceBonus = mtf.isTripleScreenConfluence ? ' (Triple-Screen Confluence 🟢)' : '';
       }
 
-      // Gatekeeper Check: No-Trade Engine (Spread, Drawdown, Regime, Liquidity Sweep)
+      // Detect actual liquidity sweep using ICT Turtle Soup / Key Level Sweeps
+      const turtleSoup = AdvancedIctEngine.detectTurtleSoupPatterns(candles, symbol);
+      const actualLiquiditySweep = turtleSoup.some((ts: TurtleSoupPattern) => 
+        (primaryDir === 'BUY' && ts.type === 'BULLISH_TURTLE_SOUP') ||
+        (primaryDir === 'SELL' && ts.type === 'BEARISH_TURTLE_SOUP')
+      );
+
+      // Pre-calculate dynamic stop loss distance for accurate risk evaluation
+      const pip = spec.pipSize || (symbol.includes('JPY') ? 0.01 : 0.0001);
+      const preLevels = this.config.riskPreset === 'AI_DYNAMIC_SMC'
+        ? RiskEngine.calculateAiDynamicLevels(symbol, entryPrice, primaryDir, candles, this.config.lotSize)
+        : RiskEngine.calculateMicroScalpLevels(symbol, entryPrice, primaryDir, this.config.microScalpRiskUsd, this.config.microScalpRewardUsd, this.config.lotSize);
+      const dynamicSlPips = Math.max(10, Math.round(Math.abs(entryPrice - preLevels.stopLoss) / pip));
+
+      // Gatekeeper Check: No-Trade Engine (P0 FIX: Real Dynamic States instead of hardcoded placeholders)
       const noTradeCheck = NoTradeEngine.evaluate({
         setupScore: score,
         riskReward: 3.0,
         spreadPips: spec.spreadPips,
-        slPips: 30,
+        slPips: dynamicSlPips, // P0 FIX (Point 14): Dynamic calculated SL distance!
         htfBias,
         direction: primaryDir,
         regime: evalResult.regime,
-        hasLiquiditySweep: true,
-        dailyLossLimitReached: false,
-        maxOpenTradesReached: currentActiveCount >= (this.config.maxConcurrentTrades || 20),
+        hasLiquiditySweep: actualLiquiditySweep, // P0 FIX (Point 12): Actual detected liquidity sweep!
+        dailyLossLimitReached: Boolean(this.dailyLossUsd >= (this.config.maxDailyLossUsd || 25.0) || this.isCircuitBreakerTripped), // P0 FIX (Point 13): Dynamic real risk check!
+        maxOpenTradesReached: currentActiveCount >= (this.config.maxConcurrentTrades || 3),
       });
 
       if (!noTradeCheck.allowTrade) {
@@ -1912,8 +1957,20 @@ export class AutoTraderEngine {
             continue;
           }
 
-          // Rule B: Risk & Conflict Check
-          // Only block if FinRobot explicitly voted the OPPOSITE direction with conviction
+          // Rule B: P0 FIX (Point 11): Strict Minimum Consensus & Approval Gate!
+          const minRequiredConsensus = this.config.minFinRobotConsensus || 60;
+          if (!finRobotConsensus.isApproved || finRobotConsensus.consensusScore < minRequiredConsensus) {
+            this.lastScanAudit[symbol] = {
+              symbol,
+              status: 'BLOCKED',
+              reason: `FinRobot Consensus Gate VETO: isApproved=${finRobotConsensus.isApproved}, Score=${finRobotConsensus.consensusScore}% < required ${minRequiredConsensus}%`,
+              timestamp: now,
+            };
+            console.log(`[AutoTrader Scan ${symbol}]: Blocked by FinRobot Consensus Gate (Score ${finRobotConsensus.consensusScore}% < ${minRequiredConsensus}%)`);
+            continue;
+          }
+
+          // Rule C: Direction Alignment Check
           if (finRobotConsensus.primaryDirection !== 'HOLD' && finRobotConsensus.primaryDirection !== primaryDir) {
             this.lastScanAudit[symbol] = {
               symbol,

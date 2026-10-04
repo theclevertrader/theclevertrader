@@ -509,6 +509,37 @@ def fetch_live_ticks():
             pass
     return ticks
 
+def fetch_broker_symbol_specs():
+    specs = {}
+    for s in SYMBOLS_TO_TRACK:
+        try:
+            broker_sym = resolve_broker_symbol(s)
+            mt5.symbol_select(broker_sym, True)
+            info = mt5.symbol_info(broker_sym)
+            if info:
+                digits = info.digits
+                pip_size = 0.0001 if digits == 5 else (0.01 if digits == 3 else (0.1 if digits == 2 else 1.0))
+                specs[s] = {
+                    "symbol": s,
+                    "brokerSymbol": broker_sym,
+                    "priceDigits": digits,
+                    "digits": digits,
+                    "pipSize": pip_size,
+                    "contractSize": float(info.trade_contract_size or 100000),
+                    "tickValuePerLot": float(info.trade_tick_value or 10.0),
+                    "pipValue": float(info.trade_tick_value or 10.0),
+                    "minLot": float(info.volume_min or 0.01),
+                    "maxLot": float(info.volume_max or 100.0),
+                    "lotStep": float(info.volume_step or 0.01),
+                    "spreadPips": round(float(info.spread or 0) * (0.1 if digits in [3, 5] else 1.0), 2),
+                    "tickSize": float(info.trade_tick_size or 0.00001),
+                    "stopsLevel": int(info.trade_stops_level or 0),
+                    "freezeLevel": int(info.trade_freeze_level or 0),
+                }
+        except Exception:
+            pass
+    return specs
+
 def is_terminal_process_running():
     try:
         import subprocess
@@ -551,8 +582,9 @@ def main():
         # Start local high-speed rates & direct order HTTP server on port 8001
         start_local_rates_server(8001)
         
-        # Initial ticks
+        # Initial ticks & dynamic broker symbol specifications
         init_ticks = fetch_live_ticks()
+        init_specs = fetch_broker_symbol_specs()
         try:
             http_session.post(TERMINAL_URL, json={
                 "action": "heartbeat",
@@ -561,9 +593,11 @@ def main():
                 "balance": account_info.balance,
                 "equity": account_info.equity,
                 "freeMargin": account_info.margin_free,
-                "ticks": init_ticks
+                "ticks": init_ticks,
+                "symbol_specs": init_specs
             }, timeout=3)
             print("[+] Synchronized successfully with Clever Trader Terminal (http://localhost:3000)!")
+            print(f"[+] Loaded dynamic broker specifications for {len(init_specs)} instruments (Tick Value, Contract Size, Min/Max/Step Lot).")
         except Exception as e:
             print(f"[!] Warning: Could not reach Clever Trader terminal: {e}")
 
@@ -572,6 +606,7 @@ def main():
     print("[*] Press Ctrl+C to stop the bridge anytime.\n")
 
     last_disconnect_post_time = 0.0
+    last_specs_sync_time = 0.0
 
     while True:
         try:
@@ -747,7 +782,7 @@ def main():
                 except Exception:
                     pass
 
-                http_session.post(TERMINAL_URL, json={
+                sync_payload = {
                     "action": "heartbeat",
                     "login": str(acc.login),
                     "server": acc.server,
@@ -758,7 +793,15 @@ def main():
                     "positions": pos_list,
                     "floatingProfit": round(total_floating_profit, 2),
                     "totalPips": round(total_pips, 1)
-                }, timeout=1.5)
+                }
+
+                # Periodically re-sync broker contract specs every 30 seconds
+                now_t = time.time()
+                if now_t - last_specs_sync_time >= 30.0:
+                    last_specs_sync_time = now_t
+                    sync_payload["symbol_specs"] = fetch_broker_symbol_specs()
+
+                http_session.post(TERMINAL_URL, json=sync_payload, timeout=1.5)
         except Exception:
             pass
 

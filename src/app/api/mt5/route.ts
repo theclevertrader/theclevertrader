@@ -8,6 +8,7 @@ import { promises as fsPromises } from 'fs';
 import path from 'path';
 import os from 'os';
 import { verifyApiAuth, logSecurityAudit } from '@/lib/security/auth-guard';
+import { updateDynamicSymbolSpecs } from '@/lib/constants/symbols';
 
 // Debounced file-read cache to prevent blocking event loop on rapid polls
 let lastSyncFileReadTime = 0;
@@ -150,6 +151,11 @@ export async function POST(request: NextRequest) {
       // Update live real-time ticks if provided
       if (body.ticks) {
         Mt5Bridge.updateLiveTicks(body.ticks);
+      }
+
+      // Update dynamic broker symbol specifications (contract size, tick value, stops level, etc.)
+      if (body.symbol_specs || body.specs) {
+        updateDynamicSymbolSpecs(body.symbol_specs || body.specs);
       }
 
       // Update live positions if provided and run autonomous position management (Auto Break-Even & Trailing)

@@ -44,70 +44,116 @@ export class BacktestEngine {
     // Minimum warmup period of 30 bars so indicators and swing points have history
     const warmup = 30;
 
-    // Active trade tracker
+    // Active trade tracker with Institutional Trade Management (BE, 50% Partial, Trailing)
     let openTrade: {
       type: 'BUY' | 'SELL';
       entryPrice: number;
       entryTime: number;
       stopLoss: number;
+      initialStopLoss: number;
       takeProfit: number;
       lotSize: number;
+      initialLotSize: number;
       reason: string;
+      isBreakEvenArmed: boolean;
+      isPartialClosed: boolean;
+      partialProfitBooked: number;
     } | null = null;
 
     for (let i = warmup; i < candles.length; i++) {
       const currentCandle = candles[i];
       const historicalSlice = candles.slice(0, i); // Strictly NO future data leakage!
 
-      // 1. If we have an open position, check for Stop Loss or Take Profit hit during current candle
+      // 1. If we have an open position, evaluate Trade Management & SL/TP Hit
       if (openTrade) {
+        const isBuy = openTrade.type === 'BUY';
+        const bestPrice = isBuy ? currentCandle.high : currentCandle.low;
+        const favorablePriceDiff = isBuy ? bestPrice - openTrade.entryPrice : openTrade.entryPrice - bestPrice;
+        const favorablePips = spec.pipSize > 0 ? favorablePriceDiff / spec.pipSize : favorablePriceDiff;
+
+        // Auto-Breakeven (+12 pips): shift SL to entry price (+ spread buffer)
+        if (!openTrade.isBreakEvenArmed && favorablePips >= 12) {
+          const beBuffer = (spreadPips * spec.pipSize * 0.2);
+          openTrade.stopLoss = isBuy ? openTrade.entryPrice + beBuffer : openTrade.entryPrice - beBuffer;
+          openTrade.isBreakEvenArmed = true;
+        }
+
+        // 50% Partial Close (+20 pips): lock in 50% profit, arm BE
+        if (!openTrade.isPartialClosed && favorablePips >= 20) {
+          const partialLot = Math.max(spec.minLot, Math.round((openTrade.lotSize * 0.5) / spec.lotStep) * spec.lotStep);
+          if (partialLot > 0 && partialLot < openTrade.lotSize) {
+            const bookedPips = 20;
+            const grossBooked = bookedPips * (partialLot * spec.tickValuePerLot);
+            const commBooked = partialLot * commissionPerLot;
+            const netBooked = grossBooked - commBooked;
+
+            currentEquity += netBooked;
+            if (currentEquity > peakEquity) peakEquity = currentEquity;
+            openTrade.partialProfitBooked += netBooked;
+            openTrade.lotSize = Number((openTrade.lotSize - partialLot).toFixed(2));
+            openTrade.isPartialClosed = true;
+
+            const beBuffer = (spreadPips * spec.pipSize * 0.2);
+            openTrade.stopLoss = isBuy ? Math.max(openTrade.stopLoss, openTrade.entryPrice + beBuffer) : Math.min(openTrade.stopLoss, openTrade.entryPrice - beBuffer);
+            openTrade.isBreakEvenArmed = true;
+          }
+        }
+
+        // Dynamic Trailing Stop (+18 pips activation, 12 pips trail distance)
+        if (favorablePips >= 18) {
+          const trailDistance = 12 * spec.pipSize;
+          if (isBuy) {
+            const potentialSl = currentCandle.close - trailDistance;
+            if (potentialSl > openTrade.stopLoss) {
+              openTrade.stopLoss = potentialSl;
+            }
+          } else {
+            const potentialSl = currentCandle.close + trailDistance;
+            if (potentialSl < openTrade.stopLoss) {
+              openTrade.stopLoss = potentialSl;
+            }
+          }
+        }
+
+        // Check Exit Hit
         let isClosed = false;
         let exitPrice = 0;
-        let result: 'WIN' | 'LOSS' | 'BREAKEVEN' = 'LOSS';
 
-        if (openTrade.type === 'BUY') {
-          // Check Stop Loss hit first (worst-case execution)
+        if (isBuy) {
           if (currentCandle.low <= openTrade.stopLoss) {
             isClosed = true;
             exitPrice = openTrade.stopLoss - (slippagePips * spec.pipSize);
-            result = 'LOSS';
           } else if (currentCandle.high >= openTrade.takeProfit) {
             isClosed = true;
             exitPrice = openTrade.takeProfit;
-            result = 'WIN';
           }
         } else {
-          // SELL
           if (currentCandle.high >= openTrade.stopLoss) {
             isClosed = true;
             exitPrice = openTrade.stopLoss + (slippagePips * spec.pipSize);
-            result = 'LOSS';
           } else if (currentCandle.low <= openTrade.takeProfit) {
             isClosed = true;
             exitPrice = openTrade.takeProfit;
-            result = 'WIN';
           }
         }
 
         if (isClosed) {
-          const priceDiff = openTrade.type === 'BUY' 
-            ? exitPrice - openTrade.entryPrice 
-            : openTrade.entryPrice - exitPrice;
-          
+          const priceDiff = isBuy ? exitPrice - openTrade.entryPrice : openTrade.entryPrice - exitPrice;
           const pipsGain = spec.pipSize > 0 ? priceDiff / spec.pipSize : priceDiff;
           const grossProfit = pipsGain * (openTrade.lotSize * spec.tickValuePerLot);
           const commissionCost = openTrade.lotSize * commissionPerLot;
-          const netProfit = grossProfit - commissionCost;
+          const remainingNetProfit = grossProfit - commissionCost;
+          const totalNetProfit = remainingNetProfit + openTrade.partialProfitBooked;
 
-          currentEquity += netProfit;
+          currentEquity += remainingNetProfit;
           if (currentEquity > peakEquity) peakEquity = currentEquity;
           const ddUsd = peakEquity - currentEquity;
           const ddPct = (ddUsd / peakEquity) * 100;
           if (ddUsd > maxDrawdownUsd) maxDrawdownUsd = ddUsd;
           if (ddPct > maxDrawdownPct) maxDrawdownPct = ddPct;
 
-          const slPips = Math.abs(openTrade.entryPrice - openTrade.stopLoss) / spec.pipSize;
-          const rMultiple = slPips > 0 ? Number((pipsGain / slPips).toFixed(2)) : 0;
+          const initialSlPips = Math.abs(openTrade.entryPrice - openTrade.initialStopLoss) / spec.pipSize;
+          const rMultiple = initialSlPips > 0 ? Number((pipsGain / initialSlPips).toFixed(2)) : 0;
 
           trades.push({
             id: `bt-trade-${trades.length + 1}`,
@@ -119,12 +165,12 @@ export class BacktestEngine {
             exitPrice,
             stopLoss: openTrade.stopLoss,
             takeProfit: openTrade.takeProfit,
-            lotSize: openTrade.lotSize,
-            profitUsd: Number(netProfit.toFixed(2)),
-            returnPercent: Number(((netProfit / initialBalance) * 100).toFixed(2)),
+            lotSize: openTrade.initialLotSize,
+            profitUsd: Number(totalNetProfit.toFixed(2)),
+            returnPercent: Number(((totalNetProfit / initialBalance) * 100).toFixed(2)),
             rMultiple,
-            result: netProfit > 0 ? 'WIN' : (netProfit < 0 ? 'LOSS' : 'BREAKEVEN'),
-            reason: openTrade.reason,
+            result: totalNetProfit > 0.05 ? 'WIN' : (totalNetProfit < -0.05 ? 'LOSS' : 'BREAKEVEN'),
+            reason: openTrade.isPartialClosed ? `${openTrade.reason} [50% Partial Booked]` : openTrade.reason,
           });
 
           openTrade = null;
@@ -154,7 +200,6 @@ export class BacktestEngine {
         let entryReason = '';
 
         if (strategy === 'LIQUIDITY_SWEEP_MSS' || strategy === 'SMC_ICT_CONFLUENCE') {
-          // Look for recent sell-side sweep followed by bullish displacement
           const recentSweep = sweeps.slice(-4).find(s => s.isSwept);
           const recentDisplacement = paSignals.slice(-2).find(p => p.pattern === 'DISPLACEMENT' || p.pattern === 'ENGULFING');
 
@@ -195,7 +240,6 @@ export class BacktestEngine {
             ? currentCandle.close + spreadCost + (slippagePips * spec.pipSize)
             : currentCandle.close - (slippagePips * spec.pipSize);
 
-          // Calculate ATR / distance for SL
           const recentRanges = historicalSlice.slice(-14).map(c => c.high - c.low);
           const atr = recentRanges.reduce((a, b) => a + b, 0) / 14;
           const slDistance = Math.max(spec.pipSize * 15, atr * 1.5);
@@ -204,7 +248,6 @@ export class BacktestEngine {
           const stopLoss = isBuy ? entryPrice - slDistance : entryPrice + slDistance;
           const takeProfit = isBuy ? entryPrice + tpDistance : entryPrice - tpDistance;
 
-          // Position sizing
           let lot = 0.01;
           if (fixedLotSize && fixedLotSize > 0) {
             lot = fixedLotSize;
@@ -220,9 +263,14 @@ export class BacktestEngine {
             entryPrice,
             entryTime: currentCandle.time,
             stopLoss,
+            initialStopLoss: stopLoss,
             takeProfit,
             lotSize: lot,
+            initialLotSize: lot,
             reason: entryReason,
+            isBreakEvenArmed: false,
+            isPartialClosed: false,
+            partialProfitBooked: 0,
           };
         }
       }
@@ -263,19 +311,53 @@ export class BacktestEngine {
       }
     }
 
-    // Sharpe & Sortino Ratio
-    const returns = trades.map(t => t.returnPercent);
-    const avgReturn = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0;
-    const variance = returns.length > 0 ? returns.reduce((a, b) => a + Math.pow(b - avgReturn, 2), 0) / returns.length : 0;
-    const stdDev = Math.sqrt(variance);
-    const sharpeRatio = stdDev > 0 ? Number(((avgReturn / stdDev) * Math.sqrt(252)).toFixed(2)) : 0;
+    // Institutional Periodic Sharpe & Sortino Ratio
+    // Group equity curve changes by calendar day for hedge fund gold standard
+    const dailyEquityMap = new Map<string, number>();
+    for (const pt of equityCurve) {
+      const day = pt.time.split(' ')[0];
+      dailyEquityMap.set(day, pt.equity);
+    }
 
-    const downsideReturns = returns.filter(r => r < 0);
-    const downsideVar = downsideReturns.length > 0 
-      ? downsideReturns.reduce((a, b) => a + Math.pow(b, 2), 0) / downsideReturns.length 
-      : 0;
-    const downsideStdDev = Math.sqrt(downsideVar);
-    const sortinoRatio = downsideStdDev > 0 ? Number(((avgReturn / downsideStdDev) * Math.sqrt(252)).toFixed(2)) : 0;
+    const dailyEquities = Array.from(dailyEquityMap.values());
+    const dailyReturns: number[] = [];
+    for (let k = 1; k < dailyEquities.length; k++) {
+      const prev = dailyEquities[k - 1];
+      if (prev > 0) {
+        dailyReturns.push((dailyEquities[k] - prev) / prev);
+      }
+    }
+
+    let sharpeRatio = 0;
+    let sortinoRatio = 0;
+
+    if (dailyReturns.length >= 2) {
+      const avgDailyRet = dailyReturns.reduce((a, b) => a + b, 0) / dailyReturns.length;
+      const dailyVar = dailyReturns.reduce((a, b) => a + Math.pow(b - avgDailyRet, 2), 0) / (dailyReturns.length - 1);
+      const dailyStd = Math.sqrt(dailyVar);
+      sharpeRatio = dailyStd > 0 ? Number(((avgDailyRet / dailyStd) * Math.sqrt(252)).toFixed(2)) : 0;
+
+      const downsideDaily = dailyReturns.filter(r => r < 0);
+      const downsideDailyVar = downsideDaily.length > 0 
+        ? downsideDaily.reduce((a, b) => a + Math.pow(b, 2), 0) / downsideDaily.length 
+        : 0;
+      const downsideDailyStd = Math.sqrt(downsideDailyVar);
+      sortinoRatio = downsideDailyStd > 0 ? Number(((avgDailyRet / downsideDailyStd) * Math.sqrt(252)).toFixed(2)) : 0;
+    } else {
+      const returns = trades.map(t => t.returnPercent);
+      const avgReturn = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0;
+      const variance = returns.length > 0 ? returns.reduce((a, b) => a + Math.pow(b - avgReturn, 2), 0) / returns.length : 0;
+      const stdDev = Math.sqrt(variance);
+      const durationMs = candles.length > 1 ? candles[candles.length - 1].time - candles[0].time : 86400000;
+      const durationDays = Math.max(1, durationMs / (1000 * 60 * 60 * 24));
+      const annualizedTrades = Math.max(1, (trades.length / durationDays) * 252);
+      sharpeRatio = stdDev > 0 ? Number(((avgReturn / stdDev) * Math.sqrt(annualizedTrades)).toFixed(2)) : 0;
+
+      const downsideReturns = returns.filter(r => r < 0);
+      const downsideVar = downsideReturns.length > 0 ? downsideReturns.reduce((a, b) => a + Math.pow(b, 2), 0) / downsideReturns.length : 0;
+      const downsideStdDev = Math.sqrt(downsideVar);
+      sortinoRatio = downsideStdDev > 0 ? Number(((avgReturn / downsideStdDev) * Math.sqrt(annualizedTrades)).toFixed(2)) : 0;
+    }
 
     const avgRr = trades.length > 0 ? Number((trades.reduce((a, b) => a + b.rMultiple, 0) / trades.length).toFixed(2)) : 0;
 

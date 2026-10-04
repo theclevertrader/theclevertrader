@@ -27,6 +27,14 @@ export interface SymbolSpec {
   change24h: number;
   high24h: number;
   low24h: number;
+  // Dynamic Broker Specifications (fetched from MT5 terminal)
+  brokerSymbol?: string;
+  tickSize?: number;
+  stopsLevel?: number;
+  freezeLevel?: number;
+  swapLong?: number;
+  swapShort?: number;
+  marginInitial?: number;
 }
 
 export type TrendBias = 'BULLISH' | 'BEARISH' | 'NEUTRAL';

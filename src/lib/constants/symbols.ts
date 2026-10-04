@@ -326,3 +326,45 @@ export const INSTITUTIONAL_SYMBOLS: Record<string, SymbolSpec> = {
   },
 };
 
+/**
+ * Dynamically updates symbol specifications based on live MT5 broker feed
+ * (tick value, contract size, volume min/max/step, stops level, etc.)
+ */
+export function updateDynamicSymbolSpecs(specs: Record<string, Partial<SymbolSpec>>): void {
+  if (!specs || typeof specs !== 'object') return;
+  for (const [sym, incoming] of Object.entries(specs)) {
+    if (INSTITUTIONAL_SYMBOLS[sym]) {
+      INSTITUTIONAL_SYMBOLS[sym] = {
+        ...INSTITUTIONAL_SYMBOLS[sym],
+        ...incoming,
+        contractSize: incoming.contractSize && incoming.contractSize > 0 ? incoming.contractSize : INSTITUTIONAL_SYMBOLS[sym].contractSize,
+        tickValuePerLot: incoming.tickValuePerLot && incoming.tickValuePerLot > 0 ? incoming.tickValuePerLot : INSTITUTIONAL_SYMBOLS[sym].tickValuePerLot,
+        pipSize: incoming.pipSize && incoming.pipSize > 0 ? incoming.pipSize : INSTITUTIONAL_SYMBOLS[sym].pipSize,
+      };
+    }
+  }
+}
+
+/**
+ * Retrieves the live broker-calibrated symbol spec
+ */
+export function getLiveSymbolSpec(symbol: string): SymbolSpec {
+  return INSTITUTIONAL_SYMBOLS[symbol] || {
+    symbol,
+    name: symbol,
+    category: 'FOREX',
+    priceDigits: 5,
+    pipSize: 0.0001,
+    tickValuePerLot: 10.0,
+    contractSize: 100000,
+    minLot: 0.01,
+    maxLot: 50.0,
+    lotStep: 0.01,
+    spreadPips: 1.0,
+    currentPrice: 1.0,
+    change24h: 0,
+    high24h: 1.0,
+    low24h: 1.0,
+  };
+}
+

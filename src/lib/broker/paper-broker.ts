@@ -8,34 +8,8 @@ export class PaperBroker implements BrokerAdapter {
 
   private balance: number = 50000.0;
   private leverage: number = 100;
-  private positions: PaperPosition[] = [
-    {
-      id: 'pos-init-1',
-      symbol: 'XAUUSD',
-      type: 'BUY',
-      lotSize: 0.10,
-      entryPrice: 2646.20,
-      currentPrice: 2652.40,
-      stopLoss: 2638.00,
-      takeProfit: 2665.00,
-      unrealizedPl: 62.00,
-      openTime: Date.now() - 3600 * 1000 * 4,
-      status: 'OPEN',
-    },
-    {
-      id: 'pos-init-2',
-      symbol: 'BTCUSD',
-      type: 'BUY',
-      lotSize: 0.05,
-      entryPrice: 63200.0,
-      currentPrice: 63840.0,
-      stopLoss: 62500.0,
-      takeProfit: 65000.0,
-      unrealizedPl: 32.00,
-      openTime: Date.now() - 3600 * 1000 * 8,
-      status: 'OPEN',
-    },
-  ];
+  // Startup with 0 initial positions to prevent unrealistic P&L drift from stale price fixtures
+  private positions: PaperPosition[] = [];
 
   public async connect(): Promise<boolean> {
     return true;

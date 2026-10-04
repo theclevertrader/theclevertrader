@@ -62,8 +62,8 @@ echo [*] [3/5] Checking Web Terminal Engine...
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$conn = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if ($conn) { $p = Get-CimInstance Win32_Process -Filter \"ProcessId = $($conn.OwningProcess)\"; if ($p.CommandLine -notmatch 'clever trader') { Stop-Process -Id $p.ProcessId -Force; Start-Sleep -Seconds 1 } }"
 netstat -aon | findstr /r ":3000.*LISTENING" >nul
 if "%ERRORLEVEL%"=="0" (
-    echo [+] Web Terminal Engine is already active on port 3000!
-    goto :server_ready
+    echo [*] Port 3000 active. Verifying health...
+    goto :verify_http
 )
 
 echo [*] Starting Web Terminal Engine in background...

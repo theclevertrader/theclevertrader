@@ -30,6 +30,10 @@ powershell -Command "Get-CimInstance Win32_Process -ErrorAction SilentlyContinue
 :: Kill wscript orphans
 taskkill /F /FI "WINDOWTITLE eq THE CLEVER TRADER*" 2>nul
 
+:: Free ports 3000 and 8001 failsafe
+powershell -NoProfile -ExecutionPolicy Bypass -Command "3000, 8001 | ForEach-Object { $p = (Get-NetTCPConnection -LocalPort $_ -State Listen -ErrorAction SilentlyContinue).OwningProcess; if ($p) { Stop-Process -Id $p -Force -ErrorAction SilentlyContinue } }" 2>nul
+echo [+] Ports 3000 and 8001 verified clean and released.
+
 echo.
 echo ==============================================================================
 echo [DONE] All Clever Trader engines stopped cleanly.

@@ -1,6 +1,20 @@
 # THE CLEVER TRADER — Institutional AI Hedge Fund Trading Terminal
 
-A production-grade algorithmic and AI-powered trading platform combining **Smart Money Concepts (SMC)**, **Inner Circle Trader (ICT)** methodology, **Price Action confluence**, **Quantitative Backtesting**, **Risk Management**, **Pine Lab**, and a dedicated **Roman Urdu JARVIS AI Copilot**.
+> **Smart Money Intelligence. Quantitative Precision. Zero Account Wash Capital Shield.**  
+> *Production-Grade Algorithmic Hedge Fund Terminal combining SMC/ICT Confluence, MT5 Low-Latency Socket Bridge, BestOrderFlow Footprint HUD, and Autonomous Risk Governance.*
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![GitHub Stars](https://img.shields.io/github/stars/theclevertrader/theclevertrader?style=social)](https://github.com/theclevertrader/theclevertrader/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/theclevertrader/theclevertrader?style=social)](https://github.com/theclevertrader/theclevertrader/network/members)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/theclevertrader/theclevertrader/pulls)
+[![Quant Tests](https://img.shields.io/badge/Quant%20Tests-75%2F75%20Passed-10b981.svg)]()
+[![Python](https://img.shields.io/badge/Python-3.11+-38bdf8.svg)]()
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-000000.svg?logo=nextdotjs)]()
+[![React](https://img.shields.io/badge/React-18.3-61dafb.svg)]()
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178c6.svg)]()
+[![MT5 Bridge](https://img.shields.io/badge/MetaTrader%205-Sub--2ms%20Socket-f59e0b.svg)]()
+[![SMC & ICT](https://img.shields.io/badge/SMC%20%26%20ICT-Confluence%20Engine-00f0ff.svg)]()
+[![Capital Shield](https://img.shields.io/badge/Risk%20Governor-Auto--Breakeven%20%26%20Trailing-f43f5e.svg)]()
 
 ---
 

@@ -83,27 +83,27 @@ export interface AutoTradeRecord {
 export class AutoTraderEngine {
   private static config: AutoTraderConfig = {
     isActive: true, // Default active so user sees live autonomous monitoring immediately
-    minScore: 70, // Raised to 70+ for razor-sharp A+ Grade institutional confluence entries
+    minScore: 75, // Raised to 75+ for razor-sharp A+ Grade institutional confluence entries
     lotSize: 0.01,
     targetExecution: 'PAPER_AND_MT5',
     riskPreset: 'FIXED_RR_1_3', // Strict 1:3 Risk-to-Reward Ratio (Rule 2)
     microScalpRiskUsd: 5.0, // Fallback if MICRO_SCALP selected
     microScalpRewardUsd: 15.0, // Strict 1:3 R:R ($5 risk / $15 reward)
-    maxDailyTrades: 350, // Raised to match high-volume winning day like Sep 14
-    maxConcurrentTrades: 10, // Global safety cap across all symbols
-    maxPositionsPerSymbol: 2, // Allow up to 2 simultaneous positions per symbol
+    maxDailyTrades: 6, // P0 FIX: Institutional portfolio discipline (Max 6 high-conviction trades/day instead of 350)
+    maxConcurrentTrades: 3, // Conservative safety cap across all symbols
+    maxPositionsPerSymbol: 1, // Max 1 active position per symbol to prevent over-exposure
     highAccuracyMode: true, // Multi-Timeframe Matrix + SMC Value Zone & OTE strict filter
     useFinRobotConsensus: true, // FinRobot 4-Agent Consensus Protocol (Columbia Univ / AI4Finance)
-    minFinRobotConsensus: 55, // 55+ consensus score required (allows 3/4 supermajority when L2 book is neutral)
+    minFinRobotConsensus: 60, // 60+ consensus score required
     enforceKillzones: true, // ICT London/NY Killzones enforcement (Blocks Asian chop & Rollover - Rule 3)
     enforceNewsShield: true, // High-Impact Red-Folder Economic Blocker (-15m to +15m window)
     enforceSpreadGuard: true, // Live Broker Spread Spike Guard
-    enforceCircuitBreaker: false, // Disabled by default to prevent blocking user execution
-    maxDailyLossUsd: 25.0, // Max $25.00 daily loss limit (Never blow account!)
-    maxConsecutiveLosses: 4, // Max 4 consecutive losses triggers daily lock
-    dailyProfitTargetUsd: 500.0, // Daily profit target cap ($500.00) locks gains and pauses for day
-    monitoredSymbols: ['XAUUSD', 'EURUSD', 'BTCUSD', 'USDJPY', 'GBPUSD'], // Core winning pairs from Sep 14
-    cooldownSeconds: 180, // 3 minutes fast institutional cooldown between trades
+    enforceCircuitBreaker: true, // P0 FIX: Circuit breaker ALWAYS ON (Non-negotiable prop firm standard)
+    maxDailyLossUsd: 25.0, // Max $25.00 daily loss limit (~3% of $815 account, Never blow account!)
+    maxConsecutiveLosses: 3, // Max 3 consecutive losses triggers daily lock
+    dailyProfitTargetUsd: 25.0, // P0 FIX: Realistic ~3% institutional daily target ($25.00) on ~$815 account
+    monitoredSymbols: ['XAUUSD', 'EURUSD', 'BTCUSD', 'USDJPY', 'GBPUSD'],
+    cooldownSeconds: 300, // 5 minutes institutional cooldown between trades
     autoCloseEnabled: true, // AI autonomously closes trades when target or reversal detected
     autoBreakEvenEnabled: true, // Auto Break-Even (Risk-Free SL) when in profit >= 12 pips
     breakEvenPips: 12, // Pips in profit before SL is shifted to Entry (Faster zero-loss arming)
@@ -1734,10 +1734,20 @@ export class AutoTraderEngine {
         }
       }
 
-      // D. 100% REAL-TIME LIVE MARKET CANDLES (Yahoo Finance / Binance)
+      // D. 100% REAL-TIME LIVE MARKET CANDLES (Yahoo Finance / Binance / MT5)
       let candles: Candle[] = [];
       try {
         const candleResult = await getLiveMarketCandles(symbol, 15, 70, livePrice);
+        if (candleResult && (candleResult.isSynthetic || !candleResult.isTradeable)) {
+          this.lastScanAudit[symbol] = {
+            symbol,
+            status: 'BLOCKED',
+            reason: `DATA INTEGRITY GUARD: Live feed unavailable (${candleResult.source}). Synthetic/fallback candles rejected for live trading.`,
+            timestamp: now,
+          };
+          console.warn(`[AutoTrader DATA INTEGRITY GUARD] ${symbol} candles are synthetic. Trade execution aborted.`);
+          continue;
+        }
         if (candleResult && candleResult.candles.length >= 20) {
           candles = candleResult.candles;
         }
@@ -2087,7 +2097,7 @@ export class AutoTraderEngine {
       let candles: Candle[] = [];
       try {
         const candleResult = await getLiveMarketCandles(sym, 15, 60, livePrice);
-        if (candleResult && candleResult.candles.length >= 20) {
+        if (candleResult && !candleResult.isSynthetic && candleResult.isTradeable && candleResult.candles.length >= 20) {
           candles = candleResult.candles;
         }
       } catch (e) {}
@@ -2146,6 +2156,10 @@ export class AutoTraderEngine {
         isSpreadSafe: currentSpreadPips <= maxAllowedPips,
       },
     };
+  }
+
+  public static getIsCircuitBreakerTripped(): boolean {
+    return this.isCircuitBreakerTripped;
   }
 }
 

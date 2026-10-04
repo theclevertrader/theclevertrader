@@ -179,11 +179,36 @@ export class FinRobotConsensusEngine {
       cotReasoning.push(`⚠️ Institutional Wall Detected: ${obi.wallSide} at price ${obi.wallPrice} (Size: ${obi.wallSize})`);
     }
 
+    // P0 FIX: Strict Institutional Order Flow Data Integrity
+    // If order book is synthetic / estimated microstructure (OTC Forex/Gold), DO NOT trigger absorption votes
+    if (obi.isSynthetic || !obi.isActionable) {
+      cotReasoning.push(`ℹ️ Microstructure Mode: OTC Broker Depth (${orderBook.source}). Exchange L2 disabled to prevent false triggers.`);
+      return {
+        agentId: 'MICROSTRUCTURE_ORDERFLOW',
+        agentName: 'Order Flow & Microstructure',
+        role: 'LEVEL 2 DEPTH & LIQUIDITY ABSORPTION',
+        vote: 'HOLD',
+        conviction: 50,
+        cotReasoning,
+        romanUrduReason: `OTC Broker Microstructure feed active hai. Real exchange L2 na hone ki wajah se quant protocol ke mutabiq vote HOLD (Neutral) par lock hai.`,
+        metrics: {
+          imbalanceRatio: obi.imbalanceRatio,
+          imbalancePercentage: obi.percentage,
+          totalBidVolume: obi.totalBidVolume,
+          totalAskVolume: obi.totalAskVolume,
+          wallSide: 'NONE',
+          wallPrice: 0,
+          wallSize: 0,
+          spreadPips: orderBook.spread,
+        },
+      };
+    }
+
     let vote: 'BUY' | 'SELL' | 'HOLD' = 'HOLD';
     let conviction = 50;
     let romanUrdu = '';
 
-    // If order book exhibits heavy Bid absorption (W-OBI >= +0.18 or Bid Wall present)
+    // If real exchange order book exhibits heavy Bid absorption (W-OBI >= +0.18 or Bid Wall present)
     if (obi.imbalanceRatio >= 0.18 || (obi.wallSide === 'BID_WALL' && obi.imbalanceRatio > -0.05)) {
       vote = 'BUY';
       conviction = Math.min(96, Math.round(55 + obi.imbalanceRatio * 40));

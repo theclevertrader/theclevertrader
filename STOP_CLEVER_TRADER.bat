@@ -37,7 +37,7 @@ echo [+] Ports 3000 and 8001 verified clean and released.
 echo.
 echo ==============================================================================
 echo [DONE] All Clever Trader engines stopped cleanly.
-echo   Logs preserved in: logs\mt5_bridge.log, logs\server.log, logs\tunnel.log
+echo   Logs preserved in: logs\mt5_bridge.log, logs\server.log, logs\trading_daemon.log, logs\tunnel.log
 echo ==============================================================================
 timeout /t 2 /nobreak >nul
 exit

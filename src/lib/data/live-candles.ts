@@ -275,15 +275,27 @@ function generateAnchoredCandles(
   return candles;
 }
 
+export interface CandleFeedResult {
+  candles: Candle[];
+  source: string;
+  isSynthetic: boolean;
+  isTradeable: boolean;
+  status: 'LIVE_FEED_AUTHENTIC' | 'DATA_INVALID_NO_LIVE_FEED';
+}
+
 /**
  * Main function to fetch real-time live candles for ANY selected market
+ * P0 ARCHITECTURE RULE:
+ * If authentic live market data (MT5, Binance, Yahoo, TwelveData) fails,
+ * fallback candles are strictly marked as isSynthetic: true and isTradeable: false.
+ * Quantitative engines must abort trade analysis when isTradeable is false!
  */
 export async function getLiveMarketCandles(
   symbol: string,
   tfMinutes: number = 15,
   count: number = 180,
   fallbackAnchorPrice?: number
-): Promise<{ candles: Candle[]; source: string }> {
+): Promise<CandleFeedResult> {
   const sym = symbol.toUpperCase().trim();
   const spec = INSTITUTIONAL_SYMBOLS[sym] || INSTITUTIONAL_SYMBOLS['XAUUSD'];
   const digits = spec?.priceDigits ?? 2;
@@ -292,7 +304,13 @@ export async function getLiveMarketCandles(
   const cached = candleCache.get(cacheKey);
 
   if (cached && Date.now() - cached.timestamp < 3000) {
-    return { candles: cached.data, source: 'CACHE' };
+    return { 
+      candles: cached.data, 
+      source: 'CACHE', 
+      isSynthetic: false, 
+      isTradeable: true, 
+      status: 'LIVE_FEED_AUTHENTIC' 
+    };
   }
 
   // 1. PRIMARY: MT5 Direct Python Bridge (2ms localhost latency, 100% authentic broker match)
@@ -303,7 +321,13 @@ export async function getLiveMarketCandles(
       candles = subdivideTo30s(candles, digits).slice(-count);
     }
     candleCache.set(cacheKey, { data: candles, timestamp: Date.now() });
-    return { candles, source: 'MT5_DIRECT' };
+    return { 
+      candles, 
+      source: 'MT5_DIRECT', 
+      isSynthetic: false, 
+      isTradeable: true, 
+      status: 'LIVE_FEED_AUTHENTIC' 
+    };
   }
 
   // 2. CRYPTO: Fetch from Binance Real-Time Klines API (24/7 authentic live crypto feed)
@@ -315,7 +339,13 @@ export async function getLiveMarketCandles(
         calibrated = subdivideTo30s(calibrated, digits).slice(-count);
       }
       candleCache.set(cacheKey, { data: calibrated, timestamp: Date.now() });
-      return { candles: calibrated, source: 'BINANCE_LIVE' };
+      return { 
+        candles: calibrated, 
+        source: 'BINANCE_LIVE', 
+        isSynthetic: false, 
+        isTradeable: true, 
+        status: 'LIVE_FEED_AUTHENTIC' 
+      };
     }
   }
 
@@ -327,7 +357,13 @@ export async function getLiveMarketCandles(
       calibrated = subdivideTo30s(calibrated, digits).slice(-count);
     }
     candleCache.set(cacheKey, { data: calibrated, timestamp: Date.now() });
-    return { candles: calibrated, source: 'YAHOO_LIVE' };
+    return { 
+      candles: calibrated, 
+      source: 'YAHOO_LIVE', 
+      isSynthetic: false, 
+      isTradeable: true, 
+      status: 'LIVE_FEED_AUTHENTIC' 
+    };
   }
 
   // 4. FALLBACK: Twelve Data (Strictly validated to ensure no flat or future-dated bars)
@@ -340,14 +376,27 @@ export async function getLiveMarketCandles(
           calibrated = subdivideTo30s(calibrated, digits).slice(-count);
         }
         candleCache.set(cacheKey, { data: calibrated, timestamp: Date.now() });
-        return { candles: calibrated, source: 'TWELVE_DATA' };
+        return { 
+          candles: calibrated, 
+          source: 'TWELVE_DATA', 
+          isSynthetic: false, 
+          isTradeable: true, 
+          status: 'LIVE_FEED_AUTHENTIC' 
+        };
       }
     } catch (err) {
       console.warn(`[LiveCandles] Twelve Data fetch failed for ${sym}:`, err);
     }
   }
 
-  // 5. LAST RESORT FALLBACK: Anchored strictly to real market current price
+  // 5. LAST RESORT FALLBACK: Anchored to real market current price (PREVIEW ONLY, NEVER TRADEABLE)
+  console.warn(`[DATA INTEGRITY GUARD] All authentic live feeds unavailable for ${sym}. Generating synthetic preview candles. LIVE TRADING BLOCKED.`);
   const anchored = generateAnchoredCandles(sym, anchor || 0, count, tfMinutes);
-  return { candles: anchored, source: 'ANCHORED_REAL_PRICE' };
+  return { 
+    candles: anchored, 
+    source: 'ANCHORED_PREVIEW_ONLY', 
+    isSynthetic: true, 
+    isTradeable: false, 
+    status: 'DATA_INVALID_NO_LIVE_FEED' 
+  };
 }

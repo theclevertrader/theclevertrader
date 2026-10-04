@@ -1,49 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
+import fs from 'fs';
+import path from 'path';
 import { AutoTraderEngine } from '@/lib/engines/auto-trader';
 import { Mt5Bridge } from '@/lib/broker/mt5-bridge';
 import { globalPaperBroker } from '@/lib/broker/paper-broker';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { RufloSelfHealingEngine } from '@/lib/engines/ruflo-self-healing-engine';
 import { RufloSwarmEngine } from '@/lib/engines/ruflo-swarm-engine';
+import { verifyApiAuth, logSecurityAudit } from '@/lib/security/auth-guard';
 
-let lastAutonomousScanTime = 0;
-let lastManagePositionsTime = 0;
-const AUTO_SCAN_INTERVAL_MS = 25000; // scan every 25 seconds autonomously
-const MANAGE_POSITIONS_THROTTLE_MS = 5000; // throttle position management to max once per 5 seconds
 let cachedTelemetry: Record<string, { data: any; time: number }> = {};
 let cachedConsensus: Record<string, { data: any; time: number }> = {};
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const symbol = (searchParams.get('symbol') || 'XAUUSD').toUpperCase();
-  const config = AutoTraderEngine.getConfig();
   const now = Date.now();
 
-  // If bot is active, manage open positions at most once every 5 seconds wrapped in Ruflo Self-Healing
-  if (config.isActive && config.autoCloseEnabled && (now - lastManagePositionsTime >= MANAGE_POSITIONS_THROTTLE_MS)) {
-    lastManagePositionsTime = now;
-    await RufloSelfHealingEngine.executeWithRecovery(
-      'BROKER_EXECUTION',
-      'AutoTrader.manageOpenPositions',
-      async () => {
-        await AutoTraderEngine.manageOpenPositions();
-      },
-      () => {}
-    );
-  }
-
-  // If bot is active, run autonomous scan periodically wrapped in Ruflo Self-Healing
-  if (config.isActive && (now - lastAutonomousScanTime >= AUTO_SCAN_INTERVAL_MS)) {
-    lastAutonomousScanTime = now;
-    await RufloSelfHealingEngine.executeWithRecovery(
-      'BROKER_EXECUTION',
-      'AutoTrader.scanAndExecute',
-      async () => {
-        await AutoTraderEngine.scanAndExecute();
-      },
-      () => {}
-    );
-  }
+  // P0 FIX: GET is strictly a pure OBSERVABILITY reader with ZERO execution side-effects!
+  // Autonomous execution is handled by the dedicated background Trading Daemon.
+  
+  // Read autonomous daemon heartbeat if available
+  let daemonStatus = { isRunning: false, lastHeartbeat: null, mode: 'STANDALONE_DAEMON' };
+  try {
+    const hbPath = path.join(process.cwd(), 'data', 'daemon_heartbeat.json');
+    if (fs.existsSync(hbPath)) {
+      const hb = JSON.parse(fs.readFileSync(hbPath, 'utf8'));
+      if (now - (hb.timestamp || 0) < 45000) {
+        daemonStatus = { isRunning: true, lastHeartbeat: hb.timestamp, mode: hb.mode || 'STANDALONE_DAEMON' };
+      }
+    }
+  } catch (e) {}
 
   const history = AutoTraderEngine.getHistory();
   const todayTradesCount = AutoTraderEngine.getTodayTradeCount();
@@ -77,14 +64,58 @@ export async function GET(request: NextRequest) {
     persistence,
     finRobotConsensus,
     protectionTelemetry,
+    daemonStatus,
     lastScanAudit: AutoTraderEngine.getLastScanAudit(),
   });
 }
 
 export async function POST(request: NextRequest) {
+  const auth = verifyApiAuth(request, { isMutating: true });
+  if (!auth.isAuthorized) {
+    return NextResponse.json({ error: auth.error }, { status: auth.statusCode || 401 });
+  }
+
   try {
     const body = await request.json();
     const action = body.action || '';
+    logSecurityAudit(`/api/auto-trade [${action}]`, auth.actor, { action, bodyKeys: Object.keys(body) }, 'GRANTED');
+
+    // Dedicated Autonomous Background Trading Daemon Tick
+    if (action === 'daemon_tick') {
+      const config = AutoTraderEngine.getConfig();
+      if (!config.isActive) {
+        return NextResponse.json({ success: true, message: 'Bot paused, daemon tick skipped' });
+      }
+
+      // 1. Manage positions (Auto-Breakeven at +12 pips, Partial Close at +20 pips, Trailing Stop)
+      if (config.autoCloseEnabled) {
+        await RufloSelfHealingEngine.executeWithRecovery(
+          'BROKER_EXECUTION',
+          'AutoTrader.manageOpenPositions',
+          async () => {
+            await AutoTraderEngine.manageOpenPositions();
+          },
+          () => {}
+        );
+      }
+
+      // 2. Scan and execute high-confluence institutional setups
+      const newTrades = await RufloSelfHealingEngine.executeWithRecovery(
+        'BROKER_EXECUTION',
+        'AutoTrader.scanAndExecute',
+        async () => {
+          return await AutoTraderEngine.scanAndExecute();
+        },
+        () => []
+      );
+
+      return NextResponse.json({
+        success: true,
+        executedCount: Array.isArray(newTrades) ? newTrades.length : 0,
+        executedTrades: newTrades || [],
+        timestamp: Date.now(),
+      });
+    }
 
     // Toggle Bot On / Off
     if (action === 'toggle') {

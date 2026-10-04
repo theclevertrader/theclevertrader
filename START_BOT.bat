@@ -104,9 +104,17 @@ ping -n 3 127.0.0.1 >nul
 
 :server_ready
 
-REM 4. Launch Cloudflare Tunnel if configured
+REM 4. Launch Autonomous Trading Worker Daemon (Decoupled Institutional Engine)
+echo [*] [4/6] Launching Autonomous Trading Worker Daemon...
+echo @echo off > "%TEMP%\_ct_daemon.bat"
+echo cd /d "%~dp0" >> "%TEMP%\_ct_daemon.bat"
+echo node scripts\autonomous_trading_daemon.mjs ^> logs\trading_daemon.log 2^>^&1 >> "%TEMP%\_ct_daemon.bat"
+wscript "%~dp0run_hidden.vbs" "%TEMP%\_ct_daemon.bat"
+echo [+] Autonomous Trading Daemon active [logs\trading_daemon.log]
+
+REM 5. Launch Cloudflare Tunnel if configured
 if not exist "START_TUNNEL.bat" goto :tunnel_done
-echo [*] [4/5] Checking Cloudflare Tunnel...
+echo [*] [5/6] Checking Cloudflare Tunnel...
 echo @echo off > "%TEMP%\_ct_tunnel.bat"
 echo cd /d "%~dp0" >> "%TEMP%\_ct_tunnel.bat"
 echo call START_TUNNEL.bat ^> logs\tunnel.log 2^>^&1 >> "%TEMP%\_ct_tunnel.bat"
@@ -115,8 +123,8 @@ echo [+] Cloudflare Tunnel launched in background [logs\tunnel.log]
 
 :tunnel_done
 
-REM 5. Open Dashboard and War Room HUD in Browser Windows
-echo [*] [5/5] Launching Dashboard and War Room HUD...
+REM 6. Open Dashboard and War Room HUD in Browser Windows
+echo [*] [6/6] Launching Dashboard and War Room HUD...
 
 set "CHROME_BIN="
 if exist "C:\Program Files\Google\Chrome\Application\chrome.exe" set "CHROME_BIN=C:\Program Files\Google\Chrome\Application\chrome.exe"

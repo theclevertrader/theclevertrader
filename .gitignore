@@ -4,14 +4,22 @@
 # =====================================================================
 
 # Environment Variables & Secrets (CRITICAL SECURITY)
+.env
 .env.local
 .env.*.local
-.env
+.env.local.backup
 !.env.example
 secrets/
 *.pem
 *.key
 *.pfx
+data/.auth_key
+data/daemon_heartbeat.json
+*.zip
+*.7z
+*.rar
+*.tar
+*.gz
 
 # Node Dependencies & Caches
 node_modules/

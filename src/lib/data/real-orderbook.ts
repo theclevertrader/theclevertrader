@@ -12,6 +12,9 @@ export interface RealOrderBook {
   asks: OrderBookLevel[];
   spread: number;
   source: string;
+  feedType: 'EXCHANGE_L2_DEPTH' | 'BROKER_TICK_ESTIMATE' | 'ESTIMATED_LIQUIDITY';
+  isSynthetic: boolean;
+  isTradeActionable: boolean;
   timestamp: number;
 }
 
@@ -60,6 +63,9 @@ async function fetchBinanceOrderBook(symbol: string): Promise<RealOrderBook | nu
       asks,
       spread,
       source: 'BINANCE_L2',
+      feedType: 'EXCHANGE_L2_DEPTH',
+      isSynthetic: false,
+      isTradeActionable: true,
       timestamp: Date.now(),
     };
   } catch (err) {
@@ -69,20 +75,22 @@ async function fetchBinanceOrderBook(symbol: string): Promise<RealOrderBook | nu
 }
 
 /**
- * Generate real-market institutional L2 book depth anchored to MT5 / Biquote live Bid/Ask
+ * Generate broker microstructure / tick depth anchored to live MT5 Bid/Ask
+ * NOTE: For OTC Forex/Metals this is an ESTIMATED TICK MICROSTRUCTURE, NOT an exchange-cleared centralized L2 book.
+ * It is strictly marked as isSynthetic: true and isTradeActionable: false so AI engines do not hallucinate L2 walls.
  */
 function buildInstitutionalDepth(
   symbol: string,
   bid: number,
   ask: number,
   spread?: number,
-  source: string = 'MT5_LIVE'
+  source: string = 'BROKER_TICK_ESTIMATE'
 ): RealOrderBook {
   const sym = symbol.toUpperCase();
   const spec = INSTITUTIONAL_SYMBOLS[sym];
   const digits = spec?.priceDigits ?? (sym.includes('JPY') ? 3 : sym.includes('EUR') || sym.includes('GBP') ? 5 : bid > 1000 ? 2 : 4);
 
-  // Realistic institutional pip step for order book laddering
+  // Realistic pip step for microstructure laddering
   let pipStep = 0.0001;
   if (sym === 'XAUUSD') pipStep = 0.10;
   else if (sym === 'XAGUSD') pipStep = 0.01;
@@ -98,7 +106,7 @@ function buildInstitutionalDepth(
   const now = Date.now();
   const timeSec = Math.floor(now / 1500);
 
-  // Generate 7 realistic institutional depth levels anchored exactly to real Bid & Ask
+  // Generate 7 depth levels anchored to real Bid & Ask
   const bids: OrderBookLevel[] = [];
   const asks: OrderBookLevel[] = [];
 
@@ -107,7 +115,7 @@ function buildInstitutionalDepth(
     const bidPrice = Number((bid - depthStep).toFixed(digits));
     const askPrice = Number((ask + depthStep).toFixed(digits));
 
-    // Realistic institutional volume / lot sizing
+    // Simulated microstructure size
     const bidSeed = Math.sin(timeSec + i * 3.7) * 1.5 + 3.2;
     const askSeed = Math.cos(timeSec + i * 2.9) * 1.5 + 3.4;
     const bidSize = Number(Math.max(0.5, bidSeed + (i * 0.4)).toFixed(2));
@@ -122,7 +130,10 @@ function buildInstitutionalDepth(
     bids,
     asks,
     spread: actualSpread,
-    source,
+    source: source.includes('MT5') ? 'BROKER_TICK_ESTIMATE' : 'ESTIMATED_LIQUIDITY',
+    feedType: 'BROKER_TICK_ESTIMATE',
+    isSynthetic: true,
+    isTradeActionable: false, // P0 FIX: Never allow synthetic depth to trigger live trades
     timestamp: now,
   };
 }
@@ -139,7 +150,7 @@ export async function getRealOrderBook(symbol: string): Promise<RealOrderBook> {
     return cached.data;
   }
 
-  // 1. If crypto, query real Binance L2 order book depth
+  // 1. If crypto, query real Binance L2 order book depth (100% Exchange L2)
   if (sym === 'BTCUSD' || sym === 'ETHUSD' || sym.startsWith('BTC') || sym.startsWith('ETH')) {
     const binanceBook = await fetchBinanceOrderBook(sym);
     if (binanceBook) {
@@ -148,13 +159,13 @@ export async function getRealOrderBook(symbol: string): Promise<RealOrderBook> {
     }
   }
 
-  // 2. For Forex, Metals, and Indices, fetch real MT5 ticks via Biquote
+  // 2. For Forex, Metals, and Indices, fetch real MT5 ticks via Biquote (Broker Microstructure Estimate)
   try {
     const bqTicks = await fetchBiquoteTicks([sym]);
     const tick: BiquoteTick | undefined = bqTicks?.[sym];
 
     if (tick && tick.bid > 0 && tick.ask > 0) {
-      const book = buildInstitutionalDepth(sym, tick.bid, tick.ask, tick.spread, 'MT5_L2');
+      const book = buildInstitutionalDepth(sym, tick.bid, tick.ask, tick.spread, 'BROKER_TICK_ESTIMATE');
       bookCache.set(sym, { data: book, timestamp: Date.now() });
       return book;
     }
@@ -167,13 +178,13 @@ export async function getRealOrderBook(symbol: string): Promise<RealOrderBook> {
   const p = spec.currentPrice;
   const spreadPoints = (spec.spreadPips || 1.5) * (spec.pipSize || 0.1);
   const halfSpread = spreadPoints / 2;
-  const fallbackBook = buildInstitutionalDepth(sym, p - halfSpread, p + halfSpread, spreadPoints, 'CT_INSTITUTIONAL');
+  const fallbackBook = buildInstitutionalDepth(sym, p - halfSpread, p + halfSpread, spreadPoints, 'ESTIMATED_LIQUIDITY');
   bookCache.set(sym, { data: fallbackBook, timestamp: Date.now() });
   return fallbackBook;
 }
 
 export interface OrderBookImbalanceMetrics {
-  imbalanceRatio: number; // -1.0 (heavy sellers/ask pressure) to +1.0 (heavy buyers/bid pressure)
+  imbalanceRatio: number; // -1.0 to +1.0
   percentage: number; // -100% to +100%
   bias: 'BULLISH_ABSORPTION' | 'BEARISH_ABSORPTION' | 'BALANCED';
   totalBidVolume: number;
@@ -183,16 +194,23 @@ export interface OrderBookImbalanceMetrics {
   wallPrice?: number;
   wallSize?: number;
   topSpread: number;
+  isSynthetic: boolean;
+  isActionable: boolean;
+  auditNote?: string;
 }
 
 /**
- * NautilusTrader-style Weighted Order Book Imbalance (W-OBI)
- * Calculates multi-level depth imbalance with decaying weights to detect institutional absorption
+ * Weighted Order Book Imbalance (W-OBI)
+ * Calculates multi-level depth imbalance with decaying weights.
+ * P0 GUARD: If book is synthetic (Forex/Gold OTC estimates), institutional wall detection is DISABLED.
  */
 export function calculateWeightedOrderBookImbalance(
-  book: { bids: OrderBookLevel[]; asks: OrderBookLevel[]; spread?: number; [key: string]: any } | RealOrderBook,
+  book: { bids: OrderBookLevel[]; asks: OrderBookLevel[]; spread?: number; isSynthetic?: boolean; isTradeActionable?: boolean; [key: string]: any } | RealOrderBook,
   depthLevels = 5
 ): OrderBookImbalanceMetrics {
+  const isSynthetic = Boolean(book && (book.isSynthetic === true || book.source !== 'BINANCE_L2'));
+  const isActionable = Boolean(book && book.isTradeActionable === true && !isSynthetic);
+
   if (!book || !book.bids.length || !book.asks.length) {
     return {
       imbalanceRatio: 0,
@@ -203,6 +221,9 @@ export function calculateWeightedOrderBookImbalance(
       institutionalWallDetected: false,
       wallSide: 'NONE',
       topSpread: 0,
+      isSynthetic,
+      isActionable: false,
+      auditNote: 'EMPTY_ORDERBOOK',
     };
   }
 
@@ -216,7 +237,6 @@ export function calculateWeightedOrderBookImbalance(
   let maxAskLevel = { p: 0, s: 0 };
 
   for (let i = 0; i < levels; i++) {
-    // Inverse distance weighting: top of book has highest weight
     const weight = 1 / (i + 1);
     const bidSize = book.bids[i]?.s || 0;
     const askSize = book.asks[i]?.s || 0;
@@ -243,29 +263,31 @@ export function calculateWeightedOrderBookImbalance(
   if (imbalanceRatio >= 0.25) bias = 'BULLISH_ABSORPTION';
   else if (imbalanceRatio <= -0.25) bias = 'BEARISH_ABSORPTION';
 
-  // Institutional Wall detection: level volume > 2.2x average depth level
-  const avgLevelSize = (totalBidVol + totalAskVol) / (levels * 2 || 1);
+  // P0 GUARD: Never hallucinate institutional walls on synthetic depth!
   let institutionalWallDetected = false;
   let wallSide: OrderBookImbalanceMetrics['wallSide'] = 'NONE';
   let wallPrice: number | undefined;
   let wallSize: number | undefined;
 
-  if (maxBidLevel.s >= avgLevelSize * 2.2 && maxBidLevel.s >= 10) {
-    institutionalWallDetected = true;
-    wallSide = 'BID_WALL';
-    wallPrice = maxBidLevel.p;
-    wallSize = maxBidLevel.s;
-  } else if (maxAskLevel.s >= avgLevelSize * 2.2 && maxAskLevel.s >= 10) {
-    institutionalWallDetected = true;
-    wallSide = 'ASK_WALL';
-    wallPrice = maxAskLevel.p;
-    wallSize = maxAskLevel.s;
+  if (isActionable) {
+    const avgLevelSize = (totalBidVol + totalAskVol) / (levels * 2 || 1);
+    if (maxBidLevel.s >= avgLevelSize * 2.2 && maxBidLevel.s >= 10) {
+      institutionalWallDetected = true;
+      wallSide = 'BID_WALL';
+      wallPrice = maxBidLevel.p;
+      wallSize = maxBidLevel.s;
+    } else if (maxAskLevel.s >= avgLevelSize * 2.2 && maxAskLevel.s >= 10) {
+      institutionalWallDetected = true;
+      wallSide = 'ASK_WALL';
+      wallPrice = maxAskLevel.p;
+      wallSize = maxAskLevel.s;
+    }
   }
 
   return {
     imbalanceRatio,
     percentage,
-    bias,
+    bias: isActionable ? bias : 'BALANCED',
     totalBidVolume: Number(totalBidVol.toFixed(2)),
     totalAskVolume: Number(totalAskVol.toFixed(2)),
     institutionalWallDetected,
@@ -273,5 +295,10 @@ export function calculateWeightedOrderBookImbalance(
     wallPrice,
     wallSize,
     topSpread: book.spread ?? 0,
+    isSynthetic,
+    isActionable,
+    auditNote: isSynthetic 
+      ? 'ESTIMATED_MICROSTRUCTURE: Real exchange L2 unavailable for OTC Forex. Trade triggers locked.' 
+      : 'EXCHANGE_L2_VERIFIED: Real exchange depth active.',
   };
 }

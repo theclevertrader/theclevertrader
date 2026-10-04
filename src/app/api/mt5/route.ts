@@ -7,6 +7,7 @@ import fs from 'fs';
 import { promises as fsPromises } from 'fs';
 import path from 'path';
 import os from 'os';
+import { verifyApiAuth, logSecurityAudit } from '@/lib/security/auth-guard';
 
 // Debounced file-read cache to prevent blocking event loop on rapid polls
 let lastSyncFileReadTime = 0;
@@ -130,9 +131,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = verifyApiAuth(request, { isMutating: true });
+  if (!auth.isAuthorized) {
+    return NextResponse.json({ error: auth.error }, { status: auth.statusCode || 401 });
+  }
+
   try {
     const body = await request.json();
     const action = body.action || '';
+    logSecurityAudit(`/api/mt5 [${action}]`, auth.actor, { action }, 'GRANTED');
 
     // Heartbeat from MT5 EA or Python bridge
     if (action === 'heartbeat' || action === 'update_balance') {

@@ -9,6 +9,7 @@ import { Mt5Bridge } from '@/lib/broker/mt5-bridge';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { NewsShieldEngine } from '@/lib/engines/news-shield-engine';
 import { RiskEngine } from '@/lib/engines/risk-engine';
+import { AutoTraderEngine } from '@/lib/engines/auto-trader';
 
 // Memory cache of recent webhook triggers for UI telemetry
 const recentTradingViewSignals: any[] = [];
@@ -68,22 +69,31 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 1. Authenticate secret (Timing-safe comparison & header / body token check)
-    const expectedSecret = process.env.TRADINGVIEW_WEBHOOK_SECRET || 'clever_trader_secure_pass_2026';
+    // 1. Authenticate secret (P0 FIX: FAIL-CLOSED — Never use default/fallback secret!)
+    const expectedSecret = process.env.TRADINGVIEW_WEBHOOK_SECRET;
+    if (!expectedSecret || expectedSecret.trim().length === 0) {
+      console.error('[TradingView Webhook Security Alert] TRADINGVIEW_WEBHOOK_SECRET is not configured in environment. Webhook locked (Fail-Closed Standard).');
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Security Error: TRADINGVIEW_WEBHOOK_SECRET is not configured on server. Webhook is locked (Fail-Closed Security Standard).' 
+        }, 
+        { status: 503 }
+      );
+    }
+
     const providedSecret = String(body.secret || req.headers.get('x-webhook-secret') || req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') || '');
     
-    // In LIVE mode or when secret is supplied, enforce strict timing-safe validation
+    // Strict timing-safe validation across all environments
     const secretMatches = Boolean(
       providedSecret &&
       providedSecret.length === expectedSecret.length &&
       crypto.timingSafeEqual(Buffer.from(providedSecret), Buffer.from(expectedSecret))
     );
 
-    if (process.env.APP_MODE === 'LIVE' || providedSecret) {
-      if (!secretMatches) {
-        console.warn('[TradingView Webhook Security Alert] Invalid or missing secret provided.');
-        return NextResponse.json({ success: false, error: 'Unauthorized: Invalid or missing webhook security secret' }, { status: 401 });
-      }
+    if (!secretMatches) {
+      console.warn('[TradingView Webhook Security Alert] Invalid or missing secret provided.');
+      return NextResponse.json({ success: false, error: 'Unauthorized: Invalid or missing webhook security secret' }, { status: 401 });
     }
 
     // 2. Normalize Symbol (Handle TV prefixes like 'OANDA:XAUUSD', 'BINANCE:BTCUSDT', etc.)
@@ -181,6 +191,55 @@ export async function POST(req: NextRequest) {
     let executionStatus = 'PENDING';
 
     if (action !== 'WAIT') {
+      // 5.0 CENTRAL INSTITUTIONAL RISK GATEWAY ENFORCEMENT
+      // P0 FIX: Never allow external webhooks to bypass centralized risk governance!
+      const traderConfig = AutoTraderEngine.getConfig();
+      const analytics = AutoTraderEngine.getDetailedAnalytics();
+      const openPositions = Mt5Bridge.getPositions();
+
+      // Check Circuit Breaker
+      if (traderConfig.enforceCircuitBreaker && AutoTraderEngine.getIsCircuitBreakerTripped()) {
+        const reason = 'CIRCUIT_BREAKER_ACTIVE: Daily loss limit or consecutive losses tripped. Live execution locked.';
+        console.warn(`[TradingView Webhook Risk Gate VETO]: ${reason}`);
+        return NextResponse.json({ success: false, status: 'REJECTED_BY_CIRCUIT_BREAKER', reason }, { status: 423 });
+      }
+
+      const maxDailyLoss = traderConfig.maxDailyLossUsd ?? 25.0;
+      const maxDailyTrades = traderConfig.maxDailyTrades ?? 6;
+      const maxConcurrent = traderConfig.maxConcurrentTrades ?? 3;
+      const maxPerSymbol = traderConfig.maxPositionsPerSymbol ?? 1;
+      const dailyNetPnl = analytics?.daily?.netPnl ?? 0;
+
+      // Check Daily Hard Loss Limit
+      if (dailyNetPnl <= -maxDailyLoss) {
+        const reason = `DAILY_LOSS_LIMIT: Realized daily loss (-$${Math.abs(dailyNetPnl).toFixed(2)}) reached max limit ($${maxDailyLoss.toFixed(2)}). Execution locked.`;
+        console.warn(`[TradingView Webhook Risk Gate VETO]: ${reason}`);
+        return NextResponse.json({ success: false, status: 'REJECTED_BY_DAILY_LOSS_GUARD', reason }, { status: 423 });
+      }
+
+      // Check Max Daily Trades
+      const todayTrades = AutoTraderEngine.getTodayTradeCount();
+      if (todayTrades >= maxDailyTrades) {
+        const reason = `MAX_DAILY_TRADES_EXCEEDED: ${todayTrades} >= ${maxDailyTrades}. Preserving capital against overtrading.`;
+        console.warn(`[TradingView Webhook Risk Gate VETO]: ${reason}`);
+        return NextResponse.json({ success: false, status: 'REJECTED_BY_DAILY_TRADE_LIMIT', reason }, { status: 429 });
+      }
+
+      // Check Portfolio Maximum Exposure
+      if (openPositions.length >= maxConcurrent) {
+        const reason = `PORTFOLIO_EXPOSURE_LIMIT: ${openPositions.length} active positions. Max concurrent limit reached.`;
+        console.warn(`[TradingView Webhook Risk Gate VETO]: ${reason}`);
+        return NextResponse.json({ success: false, status: 'REJECTED_BY_EXPOSURE_GUARD', reason }, { status: 429 });
+      }
+
+      // Check Single Symbol Exposure
+      const symbolActive = openPositions.filter(p => p.symbol === standardSymbol);
+      if (symbolActive.length >= maxPerSymbol) {
+        const reason = `MAX_SYMBOL_EXPOSURE: ${standardSymbol} already has ${symbolActive.length} open position(s).`;
+        console.warn(`[TradingView Webhook Risk Gate VETO]: ${reason}`);
+        return NextResponse.json({ success: false, status: 'REJECTED_BY_SYMBOL_EXPOSURE_GUARD', reason }, { status: 429 });
+      }
+
       // 5.1 Direct Instant Sub-1.5s HTTP Execution to local MT5 Bridge server
       try {
         const directResp = await fetch('http://127.0.0.1:8001/order', {

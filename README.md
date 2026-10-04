@@ -16,11 +16,19 @@
 [![SMC & ICT](https://img.shields.io/badge/SMC%20%26%20ICT-Confluence%20Engine-00f0ff.svg)]()
 [![Capital Shield](https://img.shields.io/badge/Risk%20Governor-Auto--Breakeven%20%26%20Trailing-f43f5e.svg)]()
 
----
+<br />
 
-## Live Terminal URL
-- Primary Dashboard: **[http://localhost:3000](http://localhost:3000)**
-- Cyber War Room HUD: **[http://localhost:3000/war-room](http://localhost:3000/war-room)**
+<div align="center">
+  <img src="public/screenshots/01_main_command_center.png" alt="The Clever Trader Institutional Command Center" width="100%" style="border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);" />
+  
+  <br /><br />
+  
+  ⭐ **If you find The Clever Trader valuable, please star this repository!** ⭐
+  
+  <br />
+  
+  [Live Dashboard (Local)](http://localhost:3000) • [Cyber War Room HUD](http://localhost:3000/war-room) • [Forex Quant Matrix](http://localhost:3000/forex-matrix) • [Strategy Benchmark](http://localhost:3000/strategies) • [Backtesting](http://localhost:3000/backtesting)
+</div>
 
 ---
 

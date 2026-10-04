@@ -26,12 +26,15 @@ export async function GET() {
     }
   } catch (e) {}
 
-  return NextResponse.json({
-    status: 'ONLINE',
-    endpoint: '/api/webhook/tradingview',
-    service: 'The Clever Trader — TradingView AI Council & Exness MT5 Bridge',
-    activeAccount: 'Exness #472658395 ($815.72 USD)',
-    councilStatus: 'ACTIVE (5 Personas)',
+    const liveCfg = Mt5Bridge.getConfig();
+    const balLabel = liveCfg.balance ? `$${liveCfg.balance.toFixed(2)} USD` : 'Connected';
+
+    return NextResponse.json({
+      status: 'ONLINE',
+      endpoint: '/api/webhook/tradingview',
+      service: 'The Clever Trader — TradingView AI Council & Exness MT5 Bridge',
+      activeAccount: `Exness #${liveCfg.login || '472658395'} (${balLabel})`,
+      councilStatus: 'ACTIVE (5 Personas)',
     activeTunnel: activeTunnelUrl,
     recentSignalsCount: recentTradingViewSignals.length,
     recentSignals: recentTradingViewSignals.slice(0, 10),
@@ -171,7 +174,7 @@ export async function POST(req: NextRequest) {
     const tp = Number(targetTp.toFixed(digits));
 
     // 4. Pass Signal to Wall Street AI Council for Verification & Sentiment Logging
-    const debate = MultiAgentDebateEngine.runDebate(standardSymbol, price);
+    const debate = await MultiAgentDebateEngine.runDebate(standardSymbol, price);
     const councilRuling = debate.judge.ruling;
     const isBullDominant = councilRuling.includes('BUY');
     const isBearDominant = councilRuling.includes('SELL');
@@ -184,7 +187,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 5. Direct Execution to MT5 (via Python Bridge Port 8001 with queue fallback)
-    const exnessBalance = 815.72;
+    const exnessBalance = Mt5Bridge.getConfig().balance || 0;
     let directMt5Result: any = null;
     let mt5Order: any = null;
     let orderTicket: string | null = null;

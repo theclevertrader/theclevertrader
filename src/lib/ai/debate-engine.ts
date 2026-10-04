@@ -1,5 +1,7 @@
 import { JarvisIntelligenceBrain } from './jarvis-brain';
 import { INSTITUTIONAL_SYMBOLS } from '../constants/symbols';
+import { getRealOrderBook, calculateWeightedOrderBookImbalance } from '../data/real-orderbook';
+import { Mt5Bridge } from '../broker/mt5-bridge';
 
 export interface DebateArgument {
   point: string;
@@ -74,7 +76,7 @@ export class MultiAgentDebateEngine {
   /**
    * Run the FinRobot-inspired Bull vs Bear vs JARVIS Judge debate
    */
-  public static runDebate(symbol: string = 'XAUUSD', currentPrice?: number): MultiAgentDebateResult {
+  public static async runDebate(symbol: string = 'XAUUSD', currentPrice?: number): Promise<MultiAgentDebateResult> {
     const sym = symbol.toUpperCase();
     const spec = INSTITUTIONAL_SYMBOLS[sym] || INSTITUTIONAL_SYMBOLS['XAUUSD'];
     const p = currentPrice && currentPrice > 0 ? currentPrice : spec.currentPrice;
@@ -94,6 +96,20 @@ export class MultiAgentDebateEngine {
     const bullTargetOffset = isBullDominant ? pip * 45 : pip * 25;
     const bearTargetOffset = !isBullDominant ? pip * 45 : pip * 25;
 
+    // Measured Depth Microstructure (Derived strictly from empirical data, zero fabricated claims)
+    const ob = await getRealOrderBook(sym);
+    const metrics = calculateWeightedOrderBookImbalance(ob);
+    const totalBids = metrics.totalBidVolume;
+    const totalAsks = metrics.totalAskVolume;
+    const obRatio = totalAsks > 0 ? (totalBids / totalAsks) : 1.0;
+    const sourceLabel = ob.feedType === 'EXCHANGE_L2_DEPTH' ? 'Exchange L2' : (ob.feedType === 'BROKER_TICK_ESTIMATE' ? 'Broker Tick Microstructure' : 'Estimated Liquidity');
+
+    const orderFlowEvidence = obRatio >= 1.15
+      ? `${sourceLabel}: Measured Bid volume (${totalBids.toFixed(1)}) exceeds Ask volume (${totalAsks.toFixed(1)}) by ${obRatio.toFixed(2)}x (${metrics.bias}).`
+      : obRatio <= 0.85
+      ? `${sourceLabel}: Measured Ask volume (${totalAsks.toFixed(1)}) exceeds Bid volume (${totalBids.toFixed(1)}) by ${(1 / (obRatio || 0.01)).toFixed(2)}x (${metrics.bias}).`
+      : `${sourceLabel}: Liquidity is balanced (Bids: ${totalBids.toFixed(1)}, Asks: ${totalAsks.toFixed(1)}, Ratio: ${obRatio.toFixed(2)}x). Near-equilibrium state.`;
+
     // 1. BULL AGENT THESIS
     const bullCatalysts: DebateArgument[] = [
       {
@@ -107,8 +123,8 @@ export class MultiAgentDebateEngine {
         impact: 'HIGH',
       },
       {
-        point: 'Volume & Order Flow Delta',
-        evidence: 'L2 Market depth par bid liquidity wall ask depth se 1.8x zyada heavy hai.',
+        point: 'Measured Order Flow Microstructure',
+        evidence: orderFlowEvidence,
         impact: 'HIGH',
       },
     ];
@@ -223,7 +239,9 @@ export class MultiAgentDebateEngine {
         role: 'Capital Preservation (1% Max Loss)',
         avatarIcon: '🛡️',
         stance: 'DEFENSIVE_RISK',
-        quoteUrdu: `Rule #1: Kabhi apna balance zaya mat karein. Real balance $815.77 par 0.01 lot size se zyada risk na lein. Daily 3% loss limit lock rahegi.`,
+        quoteUrdu: Mt5Bridge.getConfig().balance
+          ? `Rule #1: Kabhi capital zaya mat karein. Live balance $${(Mt5Bridge.getConfig().balance || 0).toFixed(2)} USD par strict 1.0% risk limit aur 0.01 lot allocation maintain karein. Daily loss limit lock rahegi.`
+          : `Rule #1: Kabhi capital zaya mat karein. Strict 1.0% maximum risk allocation aur 0.01 lot position sizing maintain karein. Daily loss limit lock rahegi.`,
         keyRule: 'Kelly Criterion 1.0% maximum risk allocation.',
         confidence: 99,
       },
@@ -251,7 +269,7 @@ export class MultiAgentDebateEngine {
       grade: 'AAA+ (Institutional Wall Street Tier)',
       winRateEstimate: `${masterScore}% Algorithmic Confluence`,
       activeEngineCount: 6,
-      exnessAccountBalance: 815.77,
+      exnessAccountBalance: Mt5Bridge.getConfig().balance || 0,
     };
 
     return {

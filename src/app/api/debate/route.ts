@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const priceParam = searchParams.get('price');
     const price = priceParam ? parseFloat(priceParam) : undefined;
 
-    const debate = MultiAgentDebateEngine.runDebate(symbol, price);
+    const debate = await MultiAgentDebateEngine.runDebate(symbol, price);
 
     return NextResponse.json({
       success: true,

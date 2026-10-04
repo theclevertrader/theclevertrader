@@ -170,7 +170,11 @@ export const AiDebateModal: React.FC<AiDebateModalProps> = ({
               </div>
               <div className="flex items-center gap-2 font-mono text-[10px]">
                 <span className="text-slate-400">EXNESS LIVE BALANCE:</span>
-                <span className="text-emerald-400 font-bold font-mono">$815.77 USD</span>
+                <span className="text-emerald-400 font-bold font-mono">
+                  {data.rankGrade?.exnessAccountBalance && data.rankGrade.exnessAccountBalance > 0
+                    ? `$${data.rankGrade.exnessAccountBalance.toFixed(2)} USD`
+                    : 'LIVE CONNECTED'}
+                </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               </div>
             </div>

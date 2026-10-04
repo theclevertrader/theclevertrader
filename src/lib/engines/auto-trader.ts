@@ -103,9 +103,9 @@ export class AutoTraderEngine {
     enforceNewsShield: true, // High-Impact Red-Folder Economic Blocker (-15m to +15m window)
     enforceSpreadGuard: true, // Live Broker Spread Spike Guard
     enforceCircuitBreaker: true, // P0 FIX: Circuit breaker ALWAYS ON (Non-negotiable prop firm standard)
-    maxDailyLossUsd: 25.0, // Max $25.00 daily loss limit (~3% of $815 account, Never blow account!)
+    maxDailyLossUsd: 25.0, // Max $25.00 daily loss limit (~3% base equity limit, Never blow account!)
     maxConsecutiveLosses: 3, // Max 3 consecutive losses triggers daily lock
-    dailyProfitTargetUsd: 25.0, // P0 FIX: Realistic ~3% institutional daily target ($25.00) on ~$815 account
+    dailyProfitTargetUsd: 25.0, // Realistic institutional daily profit target cap ($25.00)
     monitoredSymbols: ['XAUUSD', 'EURUSD', 'BTCUSD', 'USDJPY', 'GBPUSD'],
     cooldownSeconds: 300, // 5 minutes institutional cooldown between trades
     autoCloseEnabled: true, // AI autonomously closes trades when target or reversal detected

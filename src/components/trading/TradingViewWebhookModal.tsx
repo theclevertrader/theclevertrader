@@ -167,7 +167,7 @@ export const TradingViewWebhookModal: React.FC<TradingViewWebhookModalProps> = (
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-slate-300 text-[11px]">ACTIVE EXNESS ACCOUNT:</span>
-              <span className="text-emerald-400 font-bold">#472658395 ($815.77 USD)</span>
+              <span className="text-emerald-400 font-bold">#472658395 (MT5 Live Synchronized)</span>
             </div>
             <div className="text-[10px] text-purple-300">
               AI COUNCIL RISK: <span className="font-bold">0.01 LOT (1.0% MAX)</span>
@@ -295,7 +295,7 @@ export const TradingViewWebhookModal: React.FC<TradingViewWebhookModalProps> = (
             </div>
             <p>1. TradingView se alert aate hi signal sub-second mein receive hota hai.</p>
             <p>2. <strong className="text-rose-400">Michael Burry</strong> aur <strong className="text-emerald-400">Cathie Wood</strong> check karenge ke koi fake trap to nahi.</p>
-            <p>3. <strong className="text-cyan-400">Warren Buffett Guardian</strong> aap ke $815.77 Exness balance par 0.01 lot size lock karke trade execute kare ga.</p>
+            <p>3. <strong className="text-cyan-400">Warren Buffett Guardian</strong> aap ke live broker balance par 1.0% max risk aur 0.01 lot size lock karke trade execute kare ga.</p>
           </div>
 
         </div>

@@ -109,10 +109,10 @@ Whether you need a greenfield SaaS product, an algorithmic trading bot, or auton
 
 ## 📊 GitHub Activity & Metrics
 
-<div align="center">
-  <img height="180em" src="https://github-readme-stats.vercel.app/api?username=theclevertrader&show_icons=true&theme=tokyonight&include_all_commits=true&count_private=true&hide_border=true" />
-  <img height="180em" src="https://github-readme-stats.vercel.app/api/top-langs/?username=theclevertrader&layout=compact&theme=tokyonight&hide_border=true&langs_count=6" />
-</div>
+<p align="center">
+  <img src="https://github-readme-stats.vercel.app/api?username=theclevertrader&show_icons=true&theme=tokyonight&count_private=true&hide_border=true" alt="GitHub Stats" />
+  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=theclevertrader&layout=compact&theme=tokyonight&hide_border=true&langs_count=6" alt="Top Languages" />
+</p>
 
 <p align="center">
   <img src="https://github-readme-streak-stats.herokuapp.com/?user=theclevertrader&theme=tokyonight&hide_border=true" alt="GitHub Streak" />
